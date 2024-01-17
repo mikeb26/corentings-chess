@@ -247,10 +247,19 @@ func (p Piece) String() string {
 	return pieceUnicodes[int(p)]
 }
 
-// TODO: This is a constant slice
-//
-//nolint:gochecknoglobals // This is a constant slice.
-var pieceUnicodes = []string{" ", "♔", "♕", "♖", "♗", "♘", "♙", "♚", "♛", "♜", "♝", "♞", "♟"}
+// DarkString is equivalent to String() except colors reversed for terminal
+// windows in dark mode
+func (p Piece) DarkString() string {
+	return pieceDarkUnicodes[int(p)]
+}
+
+// TODO: These are constant slices
+var (
+	//nolint:gochecknoglobals // This is a constant slice.
+	pieceUnicodes = []string{" ", "♔", "♕", "♖", "♗", "♘", "♙", "♚", "♛", "♜", "♝", "♞", "♟"}
+	//nolint:gochecknoglobals // This is a constant slice.
+	pieceDarkUnicodes = []string{" ", "♚", "♛", "♜", "♝", "♞", "♟", "♔", "♕", "♖", "♗", "♘", "♙"}
+)
 
 // getFENChar returns the FEN character representation of a piece
 // Returns a single byte representing the piece.
