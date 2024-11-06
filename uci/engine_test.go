@@ -80,9 +80,10 @@ func Test_EngineInfo(t *testing.T) {
 			defer eng.Close()
 
 			cmdMultiPV := uci.CmdSetOption{Name: "multipv", Value: "2"}
+			cmdWDL := uci.CmdSetOption{Name: "UCI_ShowWDL", Value: "true"}
 			cmdPos := uci.CmdPosition{Position: pos}
 			cmdGo := uci.CmdGo{MoveTime: time.Second / 10}
-			if err := eng.Run(uci.CmdUCI, uci.CmdIsReady, uci.CmdUCINewGame, cmdMultiPV, cmdPos, cmdGo); err != nil {
+			if err := eng.Run(uci.CmdUCI, uci.CmdIsReady, uci.CmdUCINewGame, cmdMultiPV, cmdWDL, cmdPos, cmdGo); err != nil {
 				t.Fatal("failed to run command", err)
 			}
 
@@ -91,6 +92,10 @@ func Test_EngineInfo(t *testing.T) {
 
 			if moveStr != "Ne5" {
 				t.Errorf("expected Ne5, got %s", moveStr)
+			}
+			_, err = eng.SearchResults().Info.Score.WinPct()
+			if err != nil {
+				t.Errorf("Invalid win/loss/draw: %v", err)
 			}
 		})
 	}
