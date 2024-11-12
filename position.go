@@ -133,6 +133,12 @@ func (pos *Position) Turn() Color {
 	return pos.turn
 }
 
+// ChangeTurn returns a new position with the turn changed.
+func (pos *Position) ChangeTurn() *Position {
+	pos.turn = pos.turn.Other()
+	return pos
+}
+
 // HalfMoveClock returns the half-move clock (50-rule).
 func (pos *Position) HalfMoveClock() int {
 	return pos.halfMoveClock
