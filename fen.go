@@ -49,29 +49,67 @@ func decodeFEN(fen string) (*Position, error) {
 	}, nil
 }
 
-// generates board from fen format: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
+// preallocated array to avoid strings.Split allocation
+var rankBuffer [8]string
+
+// fenBoard generates board from FEN format while minimizing allocations
 func fenBoard(boardStr string) (*Board, error) {
-	rankStrs := strings.Split(boardStr, "/")
-	if len(rankStrs) != 8 {
+	// Split string into ranks without allocation
+	rankCount := 0
+	start := 0
+	for i := 0; i < len(boardStr); i++ {
+		if boardStr[i] == '/' {
+			if rankCount >= 8 {
+				return nil, fmt.Errorf("chess: fen invalid board %s", boardStr)
+			}
+			rankBuffer[rankCount] = boardStr[start:i]
+			rankCount++
+			start = i + 1
+		}
+	}
+	// Handle last rank
+	if start < len(boardStr) {
+		if rankCount >= 8 {
+			return nil, fmt.Errorf("chess: fen invalid board %s", boardStr)
+		}
+		rankBuffer[rankCount] = boardStr[start:]
+		rankCount++
+	}
+
+	if rankCount != 8 {
 		return nil, fmt.Errorf("chess: fen invalid board %s", boardStr)
 	}
-	m := map[Square]Piece{}
-	for i, rankStr := range rankStrs {
+
+	// Preallocate the map with exact size needed
+	m := make(map[Square]Piece, 32) // Maximum 32 pieces on a chess board
+
+	// Reuse single map for all ranks to avoid allocation
+	fileMap := make(map[File]Piece, 8)
+
+	for i := 0; i < 8; i++ {
 		rank := Rank(7 - i)
-		fileMap, err := fenFormRank(rankStr)
-		if err != nil {
+
+		// Clear fileMap for reuse
+		for k := range fileMap {
+			delete(fileMap, k)
+		}
+
+		// Parse rank into reused map
+		if err := fenFormRank(rankBuffer[i], fileMap); err != nil {
 			return nil, err
 		}
+
+		// Transfer pieces to main map
 		for file, piece := range fileMap {
 			m[NewSquare(file, rank)] = piece
 		}
 	}
+
 	return NewBoard(m), nil
 }
 
-// fenFormRank converts a FEN rank string to a map of pieces
-func fenFormRank(rankStr string) (map[File]Piece, error) {
-	m := make(map[File]Piece, 8)
+// fenFormRank converts a FEN rank string to a map of pieces, reusing the provided map
+func fenFormRank(rankStr string, m map[File]Piece) error {
 	var count int
 
 	for i := 0; i < len(rankStr); i++ {
@@ -86,7 +124,7 @@ func fenFormRank(rankStr string) (map[File]Piece, error) {
 		// Get piece from lookup table
 		piece := fenCharToPiece[c]
 		if piece == NoPiece {
-			return nil, fmt.Errorf("chess: invalid character in rank %q", rankStr)
+			return fmt.Errorf("chess: invalid character in rank %q", rankStr)
 		}
 
 		m[File(count)] = piece
@@ -94,10 +132,10 @@ func fenFormRank(rankStr string) (map[File]Piece, error) {
 	}
 
 	if count != 8 {
-		return nil, fmt.Errorf("chess: invalid rank %q", rankStr)
+		return fmt.Errorf("chess: invalid rank %q", rankStr)
 	}
 
-	return m, nil
+	return nil
 }
 
 func formCastleRights(castleStr string) (CastleRights, error) {
