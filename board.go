@@ -32,14 +32,14 @@ type Board struct {
 func NewBoard(m map[Square]Piece) *Board {
 	b := &Board{}
 	for _, p1 := range allPieces {
-		bm := map[Square]bool{}
-		for sq, p2 := range m {
-			if p1 == p2 {
-				bm[sq] = true
+		var bb uint64
+		for sq := 0; sq < numOfSquaresInBoard; sq++ {
+			bb <<= 1
+			if p2, exists := m[Square(sq)]; exists && p1 == p2 {
+				bb |= 1
 			}
 		}
-		bb := newBitboard(bm)
-		b.setBBForPiece(p1, bb)
+		b.setBBForPiece(p1, bitboard(bb))
 	}
 	b.calcConvienceBBs(nil)
 	return b
