@@ -174,11 +174,16 @@ func (p Piece) String() string {
 
 var pieceUnicodes = []string{" ", "♔", "♕", "♖", "♗", "♘", "♙", "♚", "♛", "♜", "♝", "♞", "♟"}
 
-func (p Piece) getFENChar() string {
-	for key, piece := range fenPieceMap {
-		if piece == p {
-			return key
-		}
+// getFENChar returns the FEN character representation of a piece
+// Returns a single byte representing the piece
+func (p Piece) getFENChar() byte {
+	pieceType := p.Type()
+	if pieceType < 0 || pieceType > 6 {
+		return 0 // Invalid piece type
 	}
-	return ""
+
+	if p.Color() == White {
+		return whitePiecesToFEN[pieceType]
+	}
+	return blackPiecesToFEN[pieceType]
 }

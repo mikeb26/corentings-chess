@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"strconv"
 	"strings"
 )
 
@@ -128,27 +127,49 @@ func (b *Board) Draw() string {
 // String implements the fmt.Stringer interface and returns
 // a string in the FEN board format: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 func (b *Board) String() string {
-	fen := ""
+	// Pre-allocate a builder with enough capacity for a typical FEN string
+	// Typical FEN board section is around 71 bytes (8 ranks * 8 squares + 7 slashes)
+	var builder strings.Builder
+	builder.Grow(71)
+
+	// Buffer to count empty squares
+	emptyCount := 0
+
+	// Process each rank
 	for r := 7; r >= 0; r-- {
-		for f := 0; f < numOfSquaresInRow; f++ {
+		// Add rank separator except for first rank
+		if r < 7 {
+			builder.WriteByte('/')
+		}
+
+		// Process each file in the rank
+		for f := 0; f < 8; f++ {
 			sq := NewSquare(File(f), Rank(r))
 			p := b.Piece(sq)
-			if p != NoPiece {
-				fen += p.getFENChar()
-			} else {
-				fen += "1"
+
+			if p == NoPiece {
+				emptyCount++
+				continue
 			}
+
+			// If we had empty squares before this piece, write the count
+			if emptyCount > 0 {
+				builder.WriteByte(byte('0' + emptyCount))
+				emptyCount = 0
+			}
+
+			// Write the piece character
+			builder.WriteByte(p.getFENChar())
 		}
-		if r != 0 {
-			fen += "/"
+
+		// Handle empty squares at end of rank
+		if emptyCount > 0 {
+			builder.WriteByte(byte('0' + emptyCount))
+			emptyCount = 0
 		}
 	}
-	for i := 8; i > 1; i-- {
-		repeatStr := strings.Repeat("1", i)
-		countStr := strconv.Itoa(i)
-		fen = strings.Replace(fen, repeatStr, countStr, -1)
-	}
-	return fen
+
+	return builder.String()
 }
 
 // Piece returns the piece for the given square.

@@ -69,27 +69,34 @@ func fenBoard(boardStr string) (*Board, error) {
 	return NewBoard(m), nil
 }
 
+// fenFormRank converts a FEN rank string to a map of pieces
 func fenFormRank(rankStr string) (map[File]Piece, error) {
-	count := 0
-	m := map[File]Piece{}
-	err := fmt.Errorf("chess: fen invalid rank %s", rankStr)
-	for _, r := range rankStr {
-		c := fmt.Sprintf("%c", r)
-		piece := fenPieceMap[c]
-		if piece == NoPiece {
-			skip, err := strconv.Atoi(c)
-			if err != nil {
-				return nil, err
-			}
-			count += skip
+	m := make(map[File]Piece, 8)
+	var count int
+
+	for i := 0; i < len(rankStr); i++ {
+		c := rankStr[i]
+
+		// Handle empty squares (digits 1-8)
+		if c >= '1' && c <= '8' {
+			count += int(c - '0')
 			continue
 		}
+
+		// Get piece from lookup table
+		piece := fenCharToPiece[c]
+		if piece == NoPiece {
+			return nil, fmt.Errorf("chess: invalid character in rank %q", rankStr)
+		}
+
 		m[File(count)] = piece
 		count++
 	}
+
 	if count != 8 {
-		return nil, err
+		return nil, fmt.Errorf("chess: invalid rank %q", rankStr)
 	}
+
 	return m, nil
 }
 
@@ -123,23 +130,46 @@ func formEnPassant(enPassant string) (Square, error) {
 }
 
 var (
-	fenPieceMap = map[string]Piece{
-		"K": WhiteKing,
-		"Q": WhiteQueen,
-		"R": WhiteRook,
-		"B": WhiteBishop,
-		"N": WhiteKnight,
-		"P": WhitePawn,
-		"k": BlackKing,
-		"q": BlackQueen,
-		"r": BlackRook,
-		"b": BlackBishop,
-		"n": BlackKnight,
-		"p": BlackPawn,
+	// whitePiecesToFEN provides direct mapping for white pieces to FEN characters
+	whitePiecesToFEN = [7]byte{
+		0,   // NoType (index 0)
+		'K', // King   (index 1)
+		'Q', // Queen  (index 2)
+		'R', // Rook   (index 3)
+		'B', // Bishop (index 4)
+		'N', // Knight (index 5)
+		'P', // Pawn   (index 6)
+	}
+
+	// blackPiecesToFEN provides direct mapping for black pieces to FEN characters
+	blackPiecesToFEN = [7]byte{
+		0,   // NoType (index 0)
+		'k', // King   (index 1)
+		'q', // Queen  (index 2)
+		'r', // Rook   (index 3)
+		'b', // Bishop (index 4)
+		'n', // Knight (index 5)
+		'p', // Pawn   (index 6)
 	}
 
 	fenTurnMap = map[string]Color{
 		"w": White,
 		"b": Black,
+	}
+
+	// Direct lookup array for FEN characters to pieces
+	fenCharToPiece = [128]Piece{
+		'K': WhiteKing,
+		'Q': WhiteQueen,
+		'R': WhiteRook,
+		'B': WhiteBishop,
+		'N': WhiteKnight,
+		'P': WhitePawn,
+		'k': BlackKing,
+		'q': BlackQueen,
+		'r': BlackRook,
+		'b': BlackBishop,
+		'n': BlackKnight,
+		'p': BlackPawn,
 	}
 )
