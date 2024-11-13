@@ -46,7 +46,7 @@ func (cr CastleRights) String() string {
 type Position struct {
 	board           *Board
 	castleRights    CastleRights
-	validMoves      []*Move
+	validMoves      []Move
 	halfMoveClock   int
 	moveCount       int
 	turn            Color
@@ -109,12 +109,12 @@ func (pos *Position) Update(m *Move) *Position {
 }
 
 // ValidMoves returns a list of valid moves for the position.
-func (pos *Position) ValidMoves() []*Move {
+func (pos *Position) ValidMoves() []Move {
 	if pos.validMoves != nil {
-		return append([]*Move(nil), pos.validMoves...)
+		return append([]Move(nil), pos.validMoves...)
 	}
 	pos.validMoves = engine{}.CalcMoves(pos, false)
-	return append([]*Move(nil), pos.validMoves...)
+	return append([]Move(nil), pos.validMoves...)
 }
 
 // Status returns the position's status as one of the outcome methods.

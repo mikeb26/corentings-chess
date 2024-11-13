@@ -57,7 +57,7 @@ func (m *Move) addTag(tag MoveTag) {
 	m.tags = m.tags | tag
 }
 
-type moveSlice []*Move
+type moveSlice []Move
 
 func (a moveSlice) find(m *Move) *Move {
 	if m == nil {
@@ -65,7 +65,7 @@ func (a moveSlice) find(m *Move) *Move {
 	}
 	for _, move := range a {
 		if move.String() == m.String() {
-			return move
+			return &move
 		}
 	}
 	return nil

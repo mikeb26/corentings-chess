@@ -32,7 +32,7 @@ func TestPositionUpdate(t *testing.T) {
 		}
 
 		{
-			np := pos.Update(pos.ValidMoves()[0])
+			np := pos.Update(&pos.ValidMoves()[0])
 			if pos.Turn().Other() != np.turn {
 				t.Fatal("expected other turn")
 			}

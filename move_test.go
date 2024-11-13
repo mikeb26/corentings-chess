@@ -298,7 +298,7 @@ func countMoves(t *testing.T, originalPosition *Position, positions []*Position,
 	newPositions := make([]*Position, 0)
 	for _, pos := range positions {
 		for _, move := range pos.ValidMoves() {
-			newPos := pos.Update(move)
+			newPos := pos.Update(&move)
 			newPositions = append(newPositions, newPos)
 		}
 	}

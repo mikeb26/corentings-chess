@@ -141,13 +141,13 @@ func (AlgebraicNotation) Decode(pos *Position, s string) (*Move, error) {
 	}
 
 	for _, m := range pos.ValidMoves() {
-		moveStr := AlgebraicNotation{}.Encode(pos, m)
+		moveStr := AlgebraicNotation{}.Encode(pos, &m)
 		moveSubmatches := pgnRegex.FindStringSubmatch(moveStr)
 		moveCleaned := strings.Join(moveSubmatches[1:9], "")
 
 		cleaned := piece + originFile + originRank + capture + file + rank + promotes + castles
 		if cleaned == moveCleaned {
-			return m, nil
+			return &m, nil
 		}
 
 		// Try and remove the disambiguators and see if it parses. Sometimes they
@@ -171,7 +171,7 @@ func (AlgebraicNotation) Decode(pos *Position, s string) (*Move, error) {
 
 		for _, opt := range options {
 			if opt == moveCleaned {
-				return m, nil
+				return &m, nil
 			}
 		}
 	}

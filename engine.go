@@ -1,8 +1,10 @@
 package chess
 
+import "sync"
+
 type engine struct{}
 
-func (engine) CalcMoves(pos *Position, first bool) []*Move {
+func (engine) CalcMoves(pos *Position, first bool) []Move {
 	// generate possible moves
 	moves := standardMoves(pos, first)
 	// return moves including castles
@@ -26,19 +28,31 @@ func (engine) Status(pos *Position) Method {
 
 var promoPieceTypes = []PieceType{Queen, Rook, Bishop, Knight}
 
-func standardMoves(pos *Position, first bool) []*Move {
-	// compute allowed destination bitboard
+const maxPossibleMoves = 218 // Maximum possible moves in any chess position
+
+var movePool = sync.Pool{
+	New: func() interface{} {
+		return &[maxPossibleMoves]Move{}
+	},
+}
+
+func standardMoves(pos *Position, first bool) []Move {
+	moves := movePool.Get().(*[maxPossibleMoves]Move)
+	defer movePool.Put(moves)
+	count := 0
+
+	// Reuse a single Move struct for temporary operations
+	var m Move
+
 	bbAllowed := ^pos.board.whiteSqs
 	if pos.Turn() == Black {
 		bbAllowed = ^pos.board.blackSqs
 	}
-	moves := []*Move{}
-	// iterate through pieces to find possible moves
+
 	for _, p := range allPieces {
 		if pos.Turn() != p.Color() {
 			continue
 		}
-		// iterate through possible starting squares for piece
 		s1BB := pos.board.bbForPiece(p)
 		if s1BB == 0 {
 			continue
@@ -47,7 +61,6 @@ func standardMoves(pos *Position, first bool) []*Move {
 			if s1BB&bbForSquare(Square(s1)) == 0 {
 				continue
 			}
-			// iterate through possible destination squares for piece
 			s2BB := bbForPossibleMoves(pos, p.Type(), Square(s1)) & bbAllowed
 			if s2BB == 0 {
 				continue
@@ -56,34 +69,49 @@ func standardMoves(pos *Position, first bool) []*Move {
 				if s2BB&bbForSquare(Square(s2)) == 0 {
 					continue
 				}
-				// add promotions if pawn on promo square
+
+				// Reuse move struct by setting fields directly
+				m.s1 = Square(s1)
+				m.s2 = Square(s2)
+				m.tags = 0 // Reset tags
+
 				if (p == WhitePawn && Square(s2).Rank() == Rank8) || (p == BlackPawn && Square(s2).Rank() == Rank1) {
 					for _, pt := range promoPieceTypes {
-						m := &Move{s1: Square(s1), s2: Square(s2), promo: pt}
-						addTags(m, pos)
-						// filter out moves that put king into check
+						m.promo = pt
+						addTags(&m, pos)
 						if !m.HasTag(inCheck) {
-							moves = append(moves, m)
+							// Copy the valid move to the array
+							moves[count] = m
+							count++
 							if first {
-								return moves
+								// For single move, return fixed array of size 1
+								var result [1]Move
+								result[0] = moves[0]
+								return result[:]
 							}
 						}
 					}
 				} else {
-					m := &Move{s1: Square(s1), s2: Square(s2)}
-					addTags(m, pos)
-					// filter out moves that put king into check
+					m.promo = 0
+					addTags(&m, pos)
 					if !m.HasTag(inCheck) {
-						moves = append(moves, m)
+						moves[count] = m
+						count++
 						if first {
-							return moves
+							var result [1]Move
+							result[0] = moves[0]
+							return result[:]
 						}
 					}
 				}
 			}
 		}
 	}
-	return moves
+
+	// Need to copy since we're returning array to pool
+	result := make([]Move, count)
+	copy(result, moves[:count])
+	return result
 }
 
 func addTags(m *Move, pos *Position) {
@@ -198,52 +226,62 @@ func bbForPossibleMoves(pos *Position, pt PieceType, sq Square) bitboard {
 	return bitboard(0)
 }
 
-// TODO can calc isInCheck twice
-func castleMoves(pos *Position) []*Move {
-	moves := []*Move{}
+func castleMoves(pos *Position) []Move {
+	var moves [2]Move // Maximum of 2 possible castle moves (king side and queen side)
+	count := 0
+
 	kingSide := pos.castleRights.CanCastle(pos.Turn(), KingSide)
 	queenSide := pos.castleRights.CanCastle(pos.Turn(), QueenSide)
+
 	// white king side
 	if pos.turn == White && kingSide &&
 		(^pos.board.emptySqs&(bbForSquare(F1)|bbForSquare(G1))) == 0 &&
 		!squaresAreAttacked(pos, F1, G1) &&
 		!pos.inCheck {
-		m := &Move{s1: E1, s2: G1}
+		m := Move{s1: E1, s2: G1}
 		m.addTag(KingSideCastle)
-		addTags(m, pos)
-		moves = append(moves, m)
+		addTags(&m, pos)
+		moves[count] = m
+		count++
 	}
+
 	// white queen side
 	if pos.turn == White && queenSide &&
 		(^pos.board.emptySqs&(bbForSquare(B1)|bbForSquare(C1)|bbForSquare(D1))) == 0 &&
 		!squaresAreAttacked(pos, C1, D1) &&
 		!pos.inCheck {
-		m := &Move{s1: E1, s2: C1}
+		m := Move{s1: E1, s2: C1}
 		m.addTag(QueenSideCastle)
-		addTags(m, pos)
-		moves = append(moves, m)
+		addTags(&m, pos)
+		moves[count] = m
+		count++
 	}
+
 	// black king side
 	if pos.turn == Black && kingSide &&
 		(^pos.board.emptySqs&(bbForSquare(F8)|bbForSquare(G8))) == 0 &&
 		!squaresAreAttacked(pos, F8, G8) &&
 		!pos.inCheck {
-		m := &Move{s1: E8, s2: G8}
+		m := Move{s1: E8, s2: G8}
 		m.addTag(KingSideCastle)
-		addTags(m, pos)
-		moves = append(moves, m)
+		addTags(&m, pos)
+		moves[count] = m
+		count++
 	}
+
 	// black queen side
 	if pos.turn == Black && queenSide &&
 		(^pos.board.emptySqs&(bbForSquare(B8)|bbForSquare(C8)|bbForSquare(D8))) == 0 &&
 		!squaresAreAttacked(pos, C8, D8) &&
 		!pos.inCheck {
-		m := &Move{s1: E8, s2: C8}
+		m := Move{s1: E8, s2: C8}
 		m.addTag(QueenSideCastle)
-		addTags(m, pos)
-		moves = append(moves, m)
+		addTags(&m, pos)
+		moves[count] = m
+		count++
 	}
-	return moves
+
+	return moves[:count]
 }
 
 func pawnMoves(pos *Position, sq Square) bitboard {

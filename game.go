@@ -180,7 +180,7 @@ func (g *Game) MoveStr(s string) error {
 
 // ValidMoves returns a list of valid moves in the
 // current position.
-func (g *Game) ValidMoves() []*Move {
+func (g *Game) ValidMoves() []Move {
 	return g.pos.ValidMoves()
 }
 

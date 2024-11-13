@@ -44,7 +44,7 @@ func TestValidDecoding(t *testing.T) {
 			if err != nil {
 				movesStrList := []string{}
 				for _, m := range test.Pos1.ValidMoves() {
-					s := n.Encode(test.Pos1, m)
+					s := n.Encode(test.Pos1, &m)
 					movesStrList = append(movesStrList, s)
 				}
 				t.Fatalf("starting from board \n%s\n expected move to be valid error - %s %s\n", test.Pos1.board.Draw(), err, strings.Join(movesStrList, ","))
