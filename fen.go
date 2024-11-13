@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // Decodes FEN notation into a GameState.  An error is returned
@@ -52,8 +53,46 @@ func decodeFEN(fen string) (*Position, error) {
 // preallocated array to avoid strings.Split allocation
 var rankBuffer [8]string
 
+// pools for map reuse
+var (
+	// pool for the main piece map (32 pieces max)
+	pieceMapPool = sync.Pool{
+		New: func() interface{} {
+			return make(map[Square]Piece, 32)
+		},
+	}
+
+	// pool for the file map (8 pieces per rank max)
+	fileMapPool = sync.Pool{
+		New: func() interface{} {
+			return make(map[File]Piece, 8)
+		},
+	}
+)
+
+// clearMap helper to clear a map without deallocating
+func clearMap[K comparable, V any](m map[K]V) {
+	for k := range m {
+		delete(m, k)
+	}
+}
+
 // fenBoard generates board from FEN format while minimizing allocations
 func fenBoard(boardStr string) (*Board, error) {
+	// Get maps from pools
+	m := pieceMapPool.Get().(map[Square]Piece)
+	fileMap := fileMapPool.Get().(map[File]Piece)
+
+	// Clear maps (in case they were reused)
+	clearMap(m)
+	clearMap(fileMap)
+
+	// Ensure maps are returned to pools on exit
+	defer func() {
+		pieceMapPool.Put(m)
+		fileMapPool.Put(fileMap)
+	}()
+
 	// Split string into ranks without allocation
 	rankCount := 0
 	start := 0
@@ -67,6 +106,7 @@ func fenBoard(boardStr string) (*Board, error) {
 			start = i + 1
 		}
 	}
+
 	// Handle last rank
 	if start < len(boardStr) {
 		if rankCount >= 8 {
@@ -80,19 +120,11 @@ func fenBoard(boardStr string) (*Board, error) {
 		return nil, fmt.Errorf("chess: fen invalid board %s", boardStr)
 	}
 
-	// Preallocate the map with exact size needed
-	m := make(map[Square]Piece, 32) // Maximum 32 pieces on a chess board
-
-	// Reuse single map for all ranks to avoid allocation
-	fileMap := make(map[File]Piece, 8)
-
 	for i := 0; i < 8; i++ {
 		rank := Rank(7 - i)
 
 		// Clear fileMap for reuse
-		for k := range fileMap {
-			delete(fileMap, k)
-		}
+		clearMap(fileMap)
 
 		// Parse rank into reused map
 		if err := fenFormRank(rankBuffer[i], fileMap); err != nil {
@@ -105,6 +137,8 @@ func fenBoard(boardStr string) (*Board, error) {
 		}
 	}
 
+	// Create new board with the pooled map
+	// Note: NewBoard must copy the map since we're returning m to the pool
 	return NewBoard(m), nil
 }
 
