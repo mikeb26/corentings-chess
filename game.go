@@ -322,7 +322,7 @@ func (g *Game) GetTagPair(k string) *TagPair {
 // RemoveTagPair removes the tag pair for the given key and
 // returns true if a tag pair was removed.
 func (g *Game) RemoveTagPair(k string) bool {
-	cp := []*TagPair{}
+	var cp []*TagPair
 	found := false
 	for _, tag := range g.tagPairs {
 		if tag.Key == k {
@@ -348,7 +348,7 @@ type MoveHistory struct {
 // MoveHistory returns the moves in order along with the pre and post
 // positions and any comments.
 func (g *Game) MoveHistory() []*MoveHistory {
-	h := []*MoveHistory{}
+	var h []*MoveHistory
 	for i, p := range g.positions {
 		if i == 0 {
 			continue
