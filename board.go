@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"strings"
+	"sync"
 )
 
 // A Board represents a chess board and its relationship between squares and pieces.
@@ -124,13 +124,25 @@ func (b *Board) Draw() string {
 	return s
 }
 
+// Fixed buffer size for FEN string
+const fenBufferSize = 71
+
+// Pre-allocate a buffer pool for FEN strings
+var fenBufferPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 0, fenBufferSize)
+	},
+}
+
 // String implements the fmt.Stringer interface and returns
 // a string in the FEN board format: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 func (b *Board) String() string {
-	// Pre-allocate a builder with enough capacity for a typical FEN string
-	// Typical FEN board section is around 71 bytes (8 ranks * 8 squares + 7 slashes)
-	var builder strings.Builder
-	builder.Grow(71)
+	// Get buffer from pool
+	buf := fenBufferPool.Get().([]byte)
+	// Clear buffer but keep capacity
+	buf = buf[:0]
+	// Ensure buffer is returned to pool
+	defer fenBufferPool.Put(buf)
 
 	// Buffer to count empty squares
 	emptyCount := 0
@@ -139,7 +151,7 @@ func (b *Board) String() string {
 	for r := 7; r >= 0; r-- {
 		// Add rank separator except for first rank
 		if r < 7 {
-			builder.WriteByte('/')
+			buf = append(buf, '/')
 		}
 
 		// Process each file in the rank
@@ -154,22 +166,23 @@ func (b *Board) String() string {
 
 			// If we had empty squares before this piece, write the count
 			if emptyCount > 0 {
-				builder.WriteByte(byte('0' + emptyCount))
+				buf = append(buf, byte('0'+emptyCount))
 				emptyCount = 0
 			}
 
 			// Write the piece character
-			builder.WriteByte(p.getFENChar())
+			buf = append(buf, p.getFENChar())
 		}
 
 		// Handle empty squares at end of rank
 		if emptyCount > 0 {
-			builder.WriteByte(byte('0' + emptyCount))
+			buf = append(buf, byte('0'+emptyCount))
 			emptyCount = 0
 		}
 	}
 
-	return builder.String()
+	// Convert to string once at the end
+	return string(buf)
 }
 
 // Piece returns the piece for the given square.
