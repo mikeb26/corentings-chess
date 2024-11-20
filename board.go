@@ -184,6 +184,9 @@ func (b *Board) String() string {
 		}
 	}
 
+	// Make sure we update the pointed-to slice with any possible reallocation
+	*bufPtr = buf
+
 	// Convert to string once at the end
 	return string(buf)
 }
