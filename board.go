@@ -131,7 +131,7 @@ const fenBufferSize = 71
 var fenBufferPool = sync.Pool{
 	New: func() interface{} {
 		buf := make([]byte, 0, fenBufferSize)
-		return buf
+		return &buf
 	},
 }
 
