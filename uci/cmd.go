@@ -313,7 +313,7 @@ func (CmdGo) ProcessResponse(e *Engine) error {
 }
 
 func parseIDLine(s string) (string, string, error) {
-	if strings.HasPrefix(s, "id") == false {
+	if !strings.HasPrefix(s, "id") {
 		return "", "", errors.New("uci: invalid id line")
 	}
 	parts := strings.Split(s, " ")

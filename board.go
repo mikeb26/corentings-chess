@@ -130,7 +130,8 @@ const fenBufferSize = 71
 // Pre-allocate a buffer pool for FEN strings
 var fenBufferPool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, 0, fenBufferSize)
+		buf := make([]byte, 0, fenBufferSize)
+		return buf
 	},
 }
 
@@ -138,14 +139,16 @@ var fenBufferPool = sync.Pool{
 // a string in the FEN board format: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 func (b *Board) String() string {
 	// Get buffer from pool
-	buf := fenBufferPool.Get().([]byte)
+	bufPtr := fenBufferPool.Get().(*[]byte)
 	// Clear buffer but keep capacity
-	buf = buf[:0]
-	// Ensure buffer is returned to pool
-	defer fenBufferPool.Put(buf)
+	*bufPtr = (*bufPtr)[:0] // Ensure buffer is returned to pool
+	defer fenBufferPool.Put(bufPtr)
 
 	// Buffer to count empty squares
 	emptyCount := 0
+
+	// Use the dereferenced slice for operations
+	buf := *bufPtr
 
 	// Process each rank
 	for r := 7; r >= 0; r-- {
