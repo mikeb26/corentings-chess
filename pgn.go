@@ -16,14 +16,17 @@ type Parser struct {
 
 // NewParser creates a new Parser instance
 func NewParser(tokens []Token) *Parser {
+	rootMove := &Move{
+		position: StartingPosition(),
+	}
 	return &Parser{
 		tokens: tokens,
 		game: &Game{
 			tagPairs: make(TagPairs),
 			pos:      StartingPosition(),
-			rootMove: &Move{}, // Empty root move
+			rootMove: rootMove, // Empty root move
 		},
-		currentMove: &Move{},
+		currentMove: rootMove,
 	}
 }
 
@@ -53,6 +56,7 @@ func (p *Parser) Parse() (*Game, error) {
 		if err != nil {
 			return nil, fmt.Errorf("decoding FEN: %w", err)
 		}
+		p.game.rootMove.position = pos
 		p.game.pos = pos
 	}
 
@@ -322,6 +326,13 @@ func (p *Parser) parseMove() (*Move, error) {
 		p.advance()
 	}
 
+	// Set move number for both white and black moves
+	if p.game.pos != nil && p.game.pos.Turn() == Black {
+		if parentMoveNum := p.currentMove.number; parentMoveNum > 0 {
+			move.number = parentMoveNum
+		}
+	}
+
 	return move, nil
 }
 func (p *Parser) parseComment() (string, error) {
@@ -383,7 +394,7 @@ func (p *Parser) parseVariation() error {
 		// the last move before the variation start
 		variationParent = parentMove.parent
 		// Reset position to where the variation starts
-		p.game.pos = variationParent.position.copy()
+		p.game.pos = variationParent.parent.position.copy()
 		if newPos := p.game.pos.Update(variationParent); newPos != nil {
 			p.game.pos = newPos
 		}
@@ -480,13 +491,13 @@ func (p *Parser) addMove(move *Move) {
 		p.currentMove.children = append(p.currentMove.children, move)
 	}
 
-	// Cache position before the move
-	move.position = p.game.pos.copy()
-
 	// Update position
 	if newPos := p.game.pos.Update(move); newPos != nil {
 		p.game.pos = newPos
 	}
+
+	// Cache position before the move
+	move.position = p.game.pos.copy()
 
 	p.currentMove = move
 }

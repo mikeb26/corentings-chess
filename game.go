@@ -60,14 +60,12 @@ type TagPairs map[string]string
 
 // A Game represents a single chess game.
 type Game struct {
-	notation             Notation
 	pos                  *Position
 	outcome              Outcome
 	tagPairs             TagPairs
 	rootMove             *Move // Root of the move tree
 	currentMove          *Move // Current position in the tree
 	comments             [][]string
-	positions            []*Position
 	method               Method
 	ignoreAutomaticDraws bool
 }
@@ -119,23 +117,14 @@ func FEN(fen string) (func(*Game), error) {
 	if err != nil {
 		return nil, err
 	}
+	if pos == nil {
+		return nil, errors.New("chess: invalid FEN")
+	}
 	return func(g *Game) {
 		pos.inCheck = isInCheck(pos)
 		g.pos = pos
-		g.positions = []*Position{pos}
 		g.updatePosition()
 	}, nil
-}
-
-// UseNotation returns a function that sets the game's notation
-// to the given value.  The notation is used to parse the
-// string supplied to the MoveStr() method as well as the
-// any PGN output.  The returned function is designed
-// to be used in the NewGame constructor.
-func UseNotation(n Notation) func(*Game) {
-	return func(g *Game) {
-		g.notation = n
-	}
 }
 
 // NewGame defaults to returning a game in the standard
@@ -143,12 +132,14 @@ func UseNotation(n Notation) func(*Game) {
 // the game's initial state.
 func NewGame(options ...func(*Game)) *Game {
 	pos := StartingPosition()
+	rootMove := &Move{
+		position: pos,
+	}
+
 	game := &Game{
-		notation:    AlgebraicNotation{},
-		rootMove:    &Move{},
-		currentMove: &Move{},
+		rootMove:    rootMove,
+		currentMove: rootMove,
 		pos:         pos,
-		positions:   []*Position{pos},
 		outcome:     NoOutcome,
 		method:      NoMethod,
 	}
@@ -184,21 +175,29 @@ func (g *Game) Move(m *Move) error {
 		return fmt.Errorf("chess: invalid move %s", m)
 	}
 	g.MakeMove(m)
-	g.pos = g.pos.Update(valid)
-	g.positions = append(g.positions, g.pos)
 	g.updatePosition()
 	return nil
 }
 
 // MakeMove adds the given move to the game.  The move is not validated and is assumed to be valid.
 func (g *Game) MakeMove(move *Move) {
-	if g.currentMove == nil {
-		g.rootMove = move
-		g.currentMove = move
-		return
+	// For the first move in the game
+	if g.currentMove == g.rootMove {
+		move.parent = g.rootMove
+		g.rootMove.children = append(g.rootMove.children, move)
+	} else {
+		// Normal move in the main line
+		move.parent = g.currentMove
+		g.currentMove.children = append(g.currentMove.children, move)
 	}
-	g.currentMove.children = append(g.currentMove.children, move)
-	move.parent = g.currentMove
+
+	// Update position
+	if newPos := g.pos.Update(move); newPos != nil {
+		g.pos = newPos
+	}
+
+	move.position = g.pos.copy()
+
 	g.currentMove = move
 }
 
@@ -226,26 +225,10 @@ func (g *Game) IsAtEnd() bool {
 	return g.currentMove != nil && len(g.currentMove.children) == 0
 }
 
-// MoveStr decodes the given string in game's notation
-// and calls the Move function.  An error is returned if
-// the move can't be decoded or the move is invalid.
-func (g *Game) MoveStr(s string) error {
-	m, err := g.notation.Decode(g.pos, s)
-	if err != nil {
-		return err
-	}
-	return g.Move(m)
-}
-
 // ValidMoves returns a list of valid moves in the
 // current position.
 func (g *Game) ValidMoves() []Move {
 	return g.pos.ValidMoves()
-}
-
-// Positions returns the position history of the game.
-func (g *Game) Positions() []*Position {
-	return append([]*Position(nil), g.positions...)
 }
 
 // Moves returns the move history of the game following the main line
@@ -267,7 +250,7 @@ func (g *Game) Moves() []*Move {
 		current = current.children[0]
 	}
 
-	return moves
+	return moves[1:] // Skip the root move
 }
 
 // Variations returns all alternative moves at the given position
@@ -437,7 +420,6 @@ func (g *Game) copy(game *Game) {
 	g.tagPairs = game.tagPairs
 	g.rootMove = game.rootMove
 	g.currentMove = game.currentMove
-	g.positions = game.Positions()
 	g.pos = game.pos
 	g.outcome = game.outcome
 	g.method = game.method
@@ -447,22 +429,48 @@ func (g *Game) copy(game *Game) {
 func (g *Game) Clone() *Game {
 	return &Game{
 		tagPairs:    g.tagPairs,
-		notation:    g.notation,
 		rootMove:    g.rootMove,
 		currentMove: g.currentMove,
-		positions:   g.Positions(),
 		pos:         g.pos,
 		outcome:     g.outcome,
 		method:      g.method,
 	}
 }
 
+func (g *Game) Positions() []*Position {
+	positions := make([]*Position, 0)
+	current := g.rootMove
+
+	for current != nil {
+		if current.position != nil {
+			positions = append(positions, current.position)
+		}
+		if len(current.children) == 0 {
+			break
+		}
+		current = current.children[0]
+	}
+
+	return positions
+}
+
 func (g *Game) numOfRepetitions() int {
 	count := 0
 	for _, pos := range g.Positions() {
+		if pos == nil {
+			continue
+		}
 		if g.pos.samePosition(pos) {
 			count++
 		}
 	}
 	return count
+}
+
+func (g *Game) MoveStr(move string) error {
+	m, err := AlgebraicNotation{}.Decode(g.pos, move)
+	if err != nil {
+		return err
+	}
+	return g.Move(m)
 }

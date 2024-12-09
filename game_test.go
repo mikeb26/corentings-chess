@@ -102,8 +102,9 @@ func TestThreeFoldRepetition(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	pos := g.Positions()
 	if err := g.Draw(ThreefoldRepetition); err != nil {
-		for _, pos := range g.Positions() {
+		for _, pos := range pos {
 			log.Println(pos.String())
 		}
 		t.Fatalf("%s - %d reps", err.Error(), g.numOfRepetitions())

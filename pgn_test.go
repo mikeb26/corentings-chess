@@ -100,9 +100,85 @@ func TestGamesFromPGN(t *testing.T) {
 		}
 
 		parser := NewParser(tokens)
-		_, err = parser.Parse()
+		game, err := parser.Parse()
 		if err != nil {
 			t.Fatalf("fail to read games from valid pgn %d: %s", idx, err.Error())
 		}
+
+		if game == nil {
+			t.Fatalf("game is nil")
+		}
 	}
+}
+
+func TestSingleGameFromPGN(t *testing.T) {
+	pgn := mustParsePGN("fixtures/pgns/single_game.pgn")
+	reader := strings.NewReader(pgn)
+
+	scanner := NewScanner(reader)
+
+	scannedGame, err := scanner.ScanGame()
+	if err != nil {
+		t.Fatalf("fail to scan game from valid pgn: %s", err.Error())
+	}
+
+	tokens, err := TokenizeGame(scannedGame)
+	if err != nil {
+		t.Fatalf("fail to tokenize game from valid pgn: %s", err.Error())
+	}
+
+	parser := NewParser(tokens)
+	game, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("fail to read games from valid pgn: %s", err.Error())
+	}
+
+	if game == nil {
+		t.Fatalf("game is nil")
+	}
+
+	if game.tagPairs["Event"] != "Example" {
+		t.Fatalf("game event is not correct")
+	}
+
+	if game.tagPairs["Site"] != "Internet" {
+		t.Fatalf("game site is not correct")
+	}
+
+	if game.tagPairs["Date"] != "2023.12.06" {
+		t.Fatalf("game date is not correct")
+	}
+
+	if game.tagPairs["Round"] != "1" {
+		t.Fatalf("game round is not correct")
+	}
+
+	if game.tagPairs["White"] != "Player1" {
+		t.Fatalf("game white is not correct")
+	}
+
+	if game.tagPairs["Black"] != "Player2" {
+		t.Fatalf("game black is not correct")
+	}
+
+	if game.tagPairs["Result"] != "1-0" {
+		t.Fatalf("game result is not correct")
+	}
+
+	// Check moves
+	if len(game.Moves()) != 6 {
+		t.Fatalf("game moves are not correct, expected 6, got %d", len(game.Moves()))
+	}
+
+	if game.Moves()[0].String() != "e2e4" {
+		t.Fatalf("game move 1 is not correct, expected e4, got %s", game.Moves()[0].String())
+	}
+
+	// print all moves
+	moves := game.Moves()
+
+	if moves[4].comments == "" {
+		t.Fatalf("game move 6 is not correct, expected comment, got %s", moves[5].comments)
+	}
+
 }
