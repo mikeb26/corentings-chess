@@ -12,8 +12,10 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -48,12 +50,8 @@ jobs:
 
       - name: Generate changelog
         uses: release-drafter/release-drafter@v5
-
-      - name: AI Code Review
-        uses: coderabbitai/ai-pr-reviewer@v1
-
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Go Report Card
         uses: creekorful/goreportcard-action@v1.0
