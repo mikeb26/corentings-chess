@@ -1,15 +1,51 @@
-# chess
-[![Build and Test](https://github.com/corentings/chess/actions/workflows/build-and-test.yaml/badge.svg)](https://github.com/corentings/chess/actions/workflows/build-and-test.yaml)
+# Chess Library
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/github.com/corentings/chess)
-[![Coverage Status](https://coveralls.io/repos/corentings/chess/badge.svg?branch=master&service=github)](https://coveralls.io/github/corentings/chess?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/corentings/chess)](https://goreportcard.com/report/corentings/chess)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/corentings/chess/master/LICENSE)
+[![codecov](https://codecov.io/gh/corentings/chess/branch/main/graph/badge.svg)](https://codecov.io/gh/corentings/chess)
+[![CI](https://github.com/corentings/chess/actions/workflows/ci.yml/badge.svg)](https://github.com/corentings/chess/actions/workflows/ci.yml)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/corentings/chess)](https://golang.org/doc/devel/release.html)
 
 ## Introduction
 
-**chess** is a set of go packages which provide common chess utilities such as move generation, turn management, checkmate detection, PGN encoding, UCI interoperability, image generation, opening book exploration, and others.  It is well tested and optimized for performance.   
+**chess** is a set of go packages which provide common chess utilities such as move generation, turn management, checkmate detection, PGN encoding, UCI interoperability, image generation, opening book exploration, and others.  It is well tested and optimized for performance.
 
-![rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1](example.png)    
+![rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1](example.png)
+
+## Why I Forked
+I forked the original notnil/chess package for several reasons:
+
+- Update Rate: The original package was not being updated at the pace I needed for my projects.
+- Pending PRs: There were numerous pull requests that needed to be merged to make the package production-ready for my work.
+-  Performance and Allocations: I wanted to improve overall performance and reduce memory allocations.
+- Customization: I had specific changes in mind that would not be easily integrated into the original package.
+
+## Credits
+I want to extend my gratitude to the original author of notnil/chess for their amazing work.
+This fork is not intended to steal or replace their work but to build upon it, providing an alternative for the open-source community and allowing for faster development.
+
+
+## Disclaimer
+**Breaking Changes**: This package is under the `/v2` namespace to signify that it might not be backward compatible with the original package.
+While some parts might work as plug-and-play, others might require changes.
+Unfortunately, I do not plan to maintain a breaking change list at this time, but I expect in-code comments and the compiler/linter to assist with migration.
+
+**Maintenance**: This package is primarily maintained for my current work and projects.
+It is shared as a respect for the original work and to contribute to the community. My main focus is:
+- Rewriting code to reduce allocations
+- Replacing strings with more efficient data structures where possible
+- Improving performance
+- Expanding test coverage and benchmarks
+- Rewriting the parser for better performance and more features
+    - Potential major changes to the game representation to support variations
+
+## Contributions
+I am open to suggestions, pull requests, and contributions from anyone interested in improving this library.
+If you have ideas or want to help make this package more robust and widely usable, please feel free to:
+- Open issues for bugs or feature requests
+- Submit pull requests with improvements or fixes
+- Contact me directly for discussions or ideas
+
 
 
 ## Repo Structure
@@ -26,12 +62,12 @@
 **chess** can be installed using "go get".
 
 ```bash
-go get -u github.com/corentings/chess
+go get -u github.com/corentings/chess/v2
 ``` 
 
 ## Usage
 
-### Example Random Game 
+### Example Random Game
 
 ```go
 package main
@@ -40,7 +76,7 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/corentings/chess"
+	"github.com/corentings/chess/v2"
 )
 
 func main() {
@@ -84,8 +120,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/corentings/chess"
-	"github.com/corentings/chess/uci"
+	"github.com/corentings/chess/v2"
+	"github.com/corentings/chess/v2/uci"
 )
 
 func main() {
@@ -120,7 +156,7 @@ func main() {
 
 ### Movement
 
-Chess exposes two ways of moving: valid move generation and notation parsing.  Valid moves are calculated from the current position and are returned from the ValidMoves method.  Even if the client isn't a go program (e.g. a web app) the list of moves can be serialized into their string representation and supplied to the client.  Once a move is selected the MoveStr method can be used to parse the selected move's string.  
+Chess exposes two ways of moving: valid move generation and notation parsing.  Valid moves are calculated from the current position and are returned from the ValidMoves method.  Even if the client isn't a go program (e.g. a web app) the list of moves can be serialized into their string representation and supplied to the client.  Once a move is selected the MoveStr method can be used to parse the selected move's string.
 
 #### Valid Moves
 
@@ -146,11 +182,11 @@ if err := game.MoveStr("e4"); err != nil {
 
 ### Outcome
 
-The outcome of the match is calculated automatically from the inputted moves if possible.  Draw agreements, resignations, and other human initiated outcomes can be inputted as well.  
+The outcome of the match is calculated automatically from the inputted moves if possible.  Draw agreements, resignations, and other human initiated outcomes can be inputted as well.
 
 #### Checkmate
 
-Black wins by checkmate (Fool's Mate):   
+Black wins by checkmate (Fool's Mate):
 
 ```go
 game := chess.NewGame()
@@ -235,7 +271,7 @@ fmt.Println(game.EligibleDraws()) //  [DrawOffer ThreefoldRepetition]
 
 #### Fivefold Repetition
 
-According to the [FIDE Laws of Chess](http://www.fide.com/component/handbook/?id=171&view=article) if a position repeats five times then the game is drawn automatically.  
+According to the [FIDE Laws of Chess](http://www.fide.com/component/handbook/?id=171&view=article) if a position repeats five times then the game is drawn automatically.
 
 ```go
 game := chess.NewGame()
@@ -254,7 +290,7 @@ fmt.Println(game.Method()) // FivefoldRepetition
 
 #### Fifty Move Rule
 
-[Fifty-move rule](https://en.wikipedia.org/wiki/Fifty-move_rule) allows either player to claim a draw if no capture has been made and no pawn has been moved in the last fifty moves.  
+[Fifty-move rule](https://en.wikipedia.org/wiki/Fifty-move_rule) allows either player to claim a draw if no capture has been made and no pawn has been moved in the last fifty moves.
 
 ```go
 fen, _ := chess.FEN("2r3k1/1q1nbppp/r3p3/3pP3/pPpP4/P1Q2N2/2RN1PPP/2R4K b - b3 100 23")
@@ -289,7 +325,7 @@ fmt.Println(game.Method()) // InsufficientMaterial
 
 ### PGN
 
-[PGN](https://en.wikipedia.org/wiki/Portable_Game_Notation), or Portable Game Notation, is the most common serialization format for chess matches.  PGNs include move history and metadata about the match.  Chess includes the ability to read and write the PGN format.  
+[PGN](https://en.wikipedia.org/wiki/Portable_Game_Notation), or Portable Game Notation, is the most common serialization format for chess matches.  PGNs include move history and metadata about the match.  Chess includes the ability to read and write the PGN format.
 
 #### Example PGN
 
@@ -314,7 +350,7 @@ Nf2 42. g4 Bd3 43. Re6 1/2-1/2
 
 #### Read PGN
 
-PGN supplied as an optional parameter to the NewGame constructor:  
+PGN supplied as an optional parameter to the NewGame constructor:
 
 ```go
 pgn, err := chess.PGN(pgnReader)
@@ -362,7 +398,7 @@ for scanner.Scan() {
 
 ### FEN
 
-[FEN](https://en.wikipedia.org/wiki/Forsyth–Edwards_Notation), or Forsyth–Edwards Notation, is the standard notation for describing a board position.  FENs include piece positions, turn, castle rights, en passant square, half move counter (for [50 move rule](https://en.wikipedia.org/wiki/Fifty-move_rule)), and full move counter. 
+[FEN](https://en.wikipedia.org/wiki/Forsyth–Edwards_Notation), or Forsyth–Edwards Notation, is the standard notation for describing a board position.  FENs include piece positions, turn, castle rights, en passant square, half move counter (for [50 move rule](https://en.wikipedia.org/wiki/Fifty-move_rule)), and full move counter.
 
 #### Read FEN
 
@@ -388,7 +424,7 @@ fmt.Println(pos.String()) // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq 
 
 ### Notations
 
-[Chess Notation](https://en.wikipedia.org/wiki/Chess_notation) define how moves are encoded in a serialized format.  Chess uses a notation when converting to and from PGN and for accepting move text.    
+[Chess Notation](https://en.wikipedia.org/wiki/Chess_notation) define how moves are encoded in a serialized format.  Chess uses a notation when converting to and from PGN and for accepting move text.
 #### Algebraic Notation
 
 [Algebraic Notation](https://en.wikipedia.org/wiki/Algebraic_notation_(chess)) (or Standard Algebraic Notation) is the official chess notation used by FIDE. Examples: e2, e5, O-O (short castling), e8=Q (promotion)
@@ -426,7 +462,7 @@ fmt.Println(game) // 1.e2e4 e7e5  *
 
 #### Text Representation
 
-Board's Draw() method can be used to visualize a position using unicode chess symbols.  
+Board's Draw() method can be used to visualize a position using unicode chess symbols.
 
 ```go
 game := chess.NewGame()
@@ -447,8 +483,8 @@ fmt.Println(game.Position().Board().Draw())
 ### Move History
 
 Move History is a convenient API for accessing aligned positions, moves, and comments.  Move
-History is useful when trying to understand detailed information about a game.  Below is an 
-example showing how to see which side castled first. 
+History is useful when trying to understand detailed information about a game.  Below is an
+example showing how to see which side castled first.
 
 ```go
 package main
@@ -457,7 +493,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/corentings/chess"
+	"github.com/corentings/chess/v2"
 )
 
 func main() {
@@ -493,7 +529,7 @@ func main() {
 
 Chess has been performance tuned, using [pprof](https://golang.org/pkg/runtime/pprof/), with the goal of being fast enough for use by chess bots.  The original map based board representation was replaced by [bitboards](https://chessprogramming.wikispaces.com/Bitboards) resulting in a large performance increase.
 
-### Benchmarks  
+### Benchmarks
 
 The benchmarks can be run with the following command:
 ```

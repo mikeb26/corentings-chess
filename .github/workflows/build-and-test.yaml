@@ -1,18 +1,55 @@
-name: Build and Test
-on: [push, pull_request]
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      
-      - uses: actions/setup-go@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.17
-      - run: wget https://stockfishchess.org/files/stockfish_14.1_linux_x64.zip
-      - run: unzip stockfish_14.1_linux_x64.zip
-      - run: ln stockfish_14.1_linux_x64/stockfish_14.1_linux_x64 stockfish
-      - run: chmod u+x stockfish
-      - run: go build -v ./...
-      - run: go test -v -bench=. ./...
-      
+          go-version: '^1.17'
+
+      - name: Test
+        run: go test -v ./... -coverprofile=coverage.txt -covermode=atomic
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+
+      - name: Generate coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.txt
+
+      - name: Vulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: Check go mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Generate changelog
+        uses: release-drafter/release-drafter@v5
+
+      - name: AI Code Review
+        uses: coderabbitai/ai-pr-reviewer@v1
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+
+      - name: Go Report Card
+        uses: creekorful/goreportcard-action@v1.0
