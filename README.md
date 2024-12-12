@@ -3,7 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/corentings/chess)](https://goreportcard.com/report/corentings/chess)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/corentings/chess/master/LICENSE)
 [![codecov](https://codecov.io/gh/corentings/chess/branch/main/graph/badge.svg)](https://codecov.io/gh/corentings/chess)
-[![CI](https://github.com/corentings/chess/actions/workflows/ci.yml/badge.svg)](https://github.com/corentings/chess/actions/workflows/ci.yml)
+[![CI](https://github.com/corentings/chess/actions/workflows/ci.yaml/badge.svg)](https://github.com/corentings/chess/actions/workflows/ci.yaml)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/corentings/chess)](https://golang.org/doc/devel/release.html)
 
 ## Introduction
