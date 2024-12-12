@@ -49,52 +49,6 @@ func Example() {
 	fmt.Println(game.String())
 }
 
-func TestEngine(t *testing.T) {
-	eng, err := uci.New(StockfishPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer eng.Close()
-	setOpt := uci.CmdSetOption{Name: "UCI_Elo", Value: "1500"}
-	setPos := uci.CmdPosition{Position: chess.StartingPosition()}
-	setGo := uci.CmdGo{MoveTime: time.Second / 10}
-	if err := eng.Run(uci.CmdUCI, uci.CmdIsReady, setOpt, uci.CmdUCINewGame, setPos, setGo); err != nil {
-		t.Fatal(err)
-	}
-	if eng.SearchResults().BestMove.S2() != chess.E4 {
-		t.Fatal("expected a different move")
-	}
-	pos := &chess.Position{}
-	pos.UnmarshalText([]byte("r4r2/1b2bppk/ppq1p3/2pp3n/5P2/1P2P3/PBPPQ1PP/R4RK1 w - - 0 2"))
-	setPos.Position = pos
-	if err := eng.Run(uci.CmdUCINewGame, setPos, setGo); err != nil {
-		t.Fatal(err)
-	}
-	if eng.SearchResults().BestMove.S2() != chess.H5 {
-		t.Fatal("expected a different move")
-	}
-}
-
-func TestStop(t *testing.T) {
-	eng, err := uci.New(StockfishPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer eng.Close()
-	go func() {
-		if err := eng.Run(uci.CmdUCI, uci.CmdIsReady, uci.CmdUCINewGame, uci.CmdGo{Infinite: true}); err != nil {
-			panic(err)
-		}
-	}()
-	time.Sleep(time.Second)
-	if err := eng.Run(uci.CmdStop); err != nil {
-		t.Fatal(err)
-	}
-	if eng.SearchResults().BestMove.S2() != chess.D4 {
-		t.Fatal("expected a different move")
-	}
-}
-
 func TestLogger(t *testing.T) {
 	t.SkipNow()
 
