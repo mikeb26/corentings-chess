@@ -11,11 +11,23 @@ on:
       - master
 
 jobs:
-  build:
-    permissions:
-      contents: write
-      pull-requests: write
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      go-version: '^1.17'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        id: setup-go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.17'
+
+  test:
+    runs-on: ubuntu-latest
+    needs: setup
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,35 +35,87 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '^1.17'
+          go-version: '${{ needs.setup.outputs.go-version }}'
 
-      - name: Test
+      - name: Run tests with coverage
         run: go test -v ./... -coverprofile=coverage.txt -covermode=atomic
 
-      # A lot of work to get this working and a lot of rewriting of the codebase. Will be added later.
-      #- name: Lint
-      #  uses: golangci/golangci-lint-action@v3
-      #  with:
-      #    version: latest
-
-      - name: Generate coverage
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage.txt
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Vulncheck
+  vulncheck:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '${{ needs.setup.outputs.go-version }}'
+
+      - name: Run vulnerability check (govulncheck)
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
-      - name: Check go mod tidy
+  tidy-check:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '${{ needs.setup.outputs.go-version }}'
+
+      - name: Verify go mod tidy
         run: |
           go mod tidy
           git diff --exit-code go.mod go.sum
+
+  changelog:
+    runs-on: ubuntu-latest
+    needs: test  # Ensure changelog runs only if tests pass
+    if: github.event_name == 'pull_request'  # Run only for pull requests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Generate changelog
         uses: release-drafter/release-drafter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Go Report Card
+  report-card:
+    runs-on: ubuntu-latest
+    needs: test  # Ensure report card runs only if tests pass
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate Go Report Card
         uses: creekorful/goreportcard-action@v1.0
+
+  # Linting job placeholder (uncomment when ready)
+  # lint:
+  #   runs-on: ubuntu-latest
+  #   needs: test  # Ensure linting runs only if tests pass and when ready to be enabled.
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v3
+  #       with:
+  #         go-version: '${{ needs.setup.outputs.go-version }}'
+
+  #     - name: Lint codebase (GolangCI-Lint)
+  #       uses: golangci/golangci-lint-action@v3
+  #       with:
+  #         version: latest
+
