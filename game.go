@@ -20,7 +20,7 @@ const (
 	Draw Outcome = "1/2-1/2"
 )
 
-// String implements the fmt.Stringer interface
+// String implements the fmt.Stringer interface.
 func (o Outcome) String() string {
 	return string(o)
 }
@@ -78,33 +78,30 @@ type Game struct {
 func PGN(r io.Reader) (func(*Game), error) {
 	scanner := NewScanner(r)
 
-	for scanner.HasNext() {
-		gameScanned, err := scanner.ScanGame()
-
-		if err != nil {
-			return nil, err
-		}
-
-		tokens, err := TokenizeGame(gameScanned)
-
-		if err != nil {
-			return nil, err
-		}
-
-		parser := NewParser(tokens)
-
-		game, err := parser.Parse()
-		if err != nil {
-			return nil, err
-		}
-
-		return func(g *Game) {
-			g.copy(game)
-		}, nil
-
+	if !scanner.HasNext() {
+		return nil, ErrNoGameFound
 	}
 
-	return nil, nil
+	gameScanned, err := scanner.ScanGame()
+	if err != nil {
+		return nil, err
+	}
+
+	tokens, err := TokenizeGame(gameScanned)
+	if err != nil {
+		return nil, err
+	}
+
+	parser := NewParser(tokens)
+	game, err := parser.Parse()
+	if err != nil {
+		return nil, err
+	}
+
+	// Return a function that updates the game with the parsed game state
+	return func(g *Game) {
+		g.copy(game)
+	}, nil
 }
 
 // FEN takes a string and returns a function that updates
@@ -158,13 +155,27 @@ func (g *Game) AddVariation(parent *Move, newMove *Move) {
 
 func (g *Game) NavigateToMainLine() {
 	current := g.currentMove
-	for current.parent != nil {
-		if len(current.parent.children) > 0 {
-			current = current.parent.children[0]
-		}
+
+	// First, navigate up to find a move that's part of the main line
+	for current.parent != nil && !isMainLine(current) {
 		current = current.parent
 	}
-	g.currentMove = current
+
+	// If there are no moves in the game, stay at root
+	if len(g.rootMove.children) == 0 {
+		g.currentMove = g.rootMove
+		return
+	}
+
+	// Otherwise, navigate to the first move of the main line
+	g.currentMove = g.rootMove.children[0]
+}
+
+func isMainLine(move *Move) bool {
+	if move.parent == nil {
+		return true
+	}
+	return move == move.parent.children[0] && isMainLine(move.parent)
 }
 
 // Move updates the game with the given move.  An error is returned
@@ -210,6 +221,7 @@ func (g *Game) GoBack() bool {
 }
 
 func (g *Game) GoForward() bool {
+	// Check if current move exists and has children
 	if g.currentMove != nil && len(g.currentMove.children) > 0 {
 		g.currentMove = g.currentMove.children[0] // Follow main line
 		return true
@@ -231,7 +243,7 @@ func (g *Game) ValidMoves() []Move {
 	return g.pos.ValidMoves()
 }
 
-// Moves returns the move history of the game following the main line
+// Moves returns the move history of the game following the main line.
 func (g *Game) Moves() []*Move {
 	if g.rootMove == nil {
 		return nil
@@ -253,7 +265,7 @@ func (g *Game) Moves() []*Move {
 	return moves[1:] // Skip the root move
 }
 
-// Variations returns all alternative moves at the given position
+// Variations returns all alternative moves at the given position.
 func (g *Game) Variations(move *Move) []*Move {
 	if move == nil || len(move.children) <= 1 {
 		return nil
@@ -263,7 +275,11 @@ func (g *Game) Variations(move *Move) []*Move {
 }
 
 // Comments returns the comments for the game indexed by moves.
+// Comments returns the comments for the game indexed by moves.
 func (g *Game) Comments() [][]string {
+	if g.comments == nil {
+		return [][]string{}
+	}
 	return append([][]string(nil), g.comments...)
 }
 
@@ -295,32 +311,35 @@ func (g *Game) String() string {
 
 // MarshalText implements the encoding.TextMarshaler interface and
 // encodes the game's PGN.
-func (g *Game) MarshalText() (text []byte, err error) {
+func (g *Game) MarshalText() ([]byte, error) {
 	return []byte(g.String()), nil
 }
 
 // UnmarshalText implements the encoding.TextUnarshaler interface and
 // assumes the data is in the PGN format.
-func (g *Game) UnmarshalText(text []byte) error {
-	return fmt.Errorf("chess: unmarshal text not implemented")
+func (g *Game) UnmarshalText(_ []byte) error {
+	return errors.New("chess: unmarshal text not implemented")
 }
 
 // Draw attempts to draw the game by the given method.  If the
 // method is valid, then the game is updated to a draw by that
 // method.  If the method isn't valid then an error is returned.
 func (g *Game) Draw(method Method) error {
+	const halfMoveClockForFiftyMoveRule = 100
+	const numOfRepetitionsForThreefoldRepetition = 3
+
 	switch method {
 	case ThreefoldRepetition:
-		if g.numOfRepetitions() < 3 {
+		if g.numOfRepetitions() < numOfRepetitionsForThreefoldRepetition {
 			return errors.New("chess: draw by ThreefoldRepetition requires at least three repetitions of the current board state")
 		}
 	case FiftyMoveRule:
-		if g.pos.halfMoveClock < 100 {
-			return fmt.Errorf("chess: draw by FiftyMoveRule requires the half move clock to be at 100 or greater but is %d", g.pos.halfMoveClock)
+		if g.pos.halfMoveClock < halfMoveClockForFiftyMoveRule {
+			return errors.New("chess: draw by FiftyMoveRule requires a half move clock of 100 or greater")
 		}
 	case DrawOffer:
 	default:
-		return fmt.Errorf("chess: unsupported draw method %s", method.String())
+		return errors.New("chess: invalid draw method")
 	}
 	g.outcome = Draw
 	g.method = method
@@ -343,11 +362,14 @@ func (g *Game) Resign(color Color) {
 
 // EligibleDraws returns valid inputs for the Draw() method.
 func (g *Game) EligibleDraws() []Method {
+	const halfMoveClockForFiftyMoveRule = 100
+	const numOfRepetitionsForThreefoldRepetition = 3
+
 	draws := []Method{DrawOffer}
-	if g.numOfRepetitions() >= 3 {
+	if g.numOfRepetitions() >= numOfRepetitionsForThreefoldRepetition {
 		draws = append(draws, ThreefoldRepetition)
 	}
-	if g.pos.halfMoveClock >= 100 {
+	if g.pos.halfMoveClock >= halfMoveClockForFiftyMoveRule {
 		draws = append(draws, FiftyMoveRule)
 	}
 	return draws
