@@ -2,8 +2,8 @@ package chess
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
-	"strings"
 )
 
 // Parser holds the state needed during parsing.
@@ -11,6 +11,7 @@ type Parser struct {
 	game        *Game
 	currentMove *Move
 	tokens      []Token
+	errors      []ParserError
 	position    int
 }
 
@@ -81,27 +82,48 @@ func (p *Parser) parseHeader() error {
 func (p *Parser) parseTagPair() error {
 	// Expect [
 	if p.currentToken().Type != TagStart {
-		return errors.New("expected tag start")
+		return &ParserError{
+			Message:    "expected tag start",
+			TokenType:  p.currentToken().Type,
+			TokenValue: p.currentToken().Value,
+			Position:   p.position,
+		}
 	}
 	p.advance()
 
 	// Get key
 	if p.currentToken().Type != TagKey {
-		return errors.New("expected tag key")
+		return &ParserError{
+			Message:    "expected tag key",
+			TokenType:  p.currentToken().Type,
+			TokenValue: p.currentToken().Value,
+			Position:   p.position,
+		}
 	}
 	key := p.currentToken().Value
 	p.advance()
 
 	// Get value
 	if p.currentToken().Type != TagValue {
-		return errors.New("expected tag value")
+		return &ParserError{
+			Message:    "expected tag value",
+			TokenType:  p.currentToken().Type,
+			TokenValue: p.currentToken().Value,
+			Position:   p.position,
+		}
+
 	}
 	value := p.currentToken().Value
 	p.advance()
 
 	// Expect ]
 	if p.currentToken().Type != TagEnd {
-		return errors.New("expected tag end")
+		return &ParserError{
+			Message:    "expected tag end",
+			TokenType:  p.currentToken().Type,
+			TokenValue: p.currentToken().Value,
+			Position:   p.position,
+		}
 	}
 	p.advance()
 
@@ -136,12 +158,13 @@ func (p *Parser) parseMoveText() error {
 			p.addMove(move)
 
 		case CommentStart:
-			comment, err := p.parseComment()
+			comment, commandMap, err := p.parseComment()
 			if err != nil {
 				return err
 			}
 			if p.currentMove != nil {
 				p.currentMove.comments = comment
+				p.currentMove.command = commandMap
 			}
 
 		case VariationStart:
@@ -179,7 +202,12 @@ func (p *Parser) parseMove() (*Move, error) {
 				return move, nil
 			}
 		}
-		return nil, errors.New("illegal kingside castle")
+		return nil, &ParserError{
+			Message:    "illegal kingside castle",
+			TokenType:  p.currentToken().Type,
+			TokenValue: p.currentToken().Value,
+			Position:   p.position,
+		}
 	}
 
 	if p.currentToken().Type == QueensideCastle {
@@ -196,7 +224,12 @@ func (p *Parser) parseMove() (*Move, error) {
 				return move, nil
 			}
 		}
-		return nil, errors.New("illegal queenside castle")
+		return nil, &ParserError{
+			Message:    "illegal queenside castle",
+			TokenType:  p.currentToken().Type,
+			TokenValue: p.currentToken().Value,
+			Position:   p.position,
+		}
 	}
 
 	// Parse regular move
@@ -237,7 +270,12 @@ func (p *Parser) parseMove() (*Move, error) {
 
 	// Get destination square
 	if p.currentToken().Type != SQUARE {
-		return nil, errors.New("expected destination square")
+		return nil, &ParserError{
+			Message:    "expected destination square",
+			TokenType:  p.currentToken().Type,
+			TokenValue: p.currentToken().Value,
+			Position:   p.position,
+		}
 	}
 	moveData.destSquare = p.currentToken().Value
 	p.advance()
@@ -246,7 +284,12 @@ func (p *Parser) parseMove() (*Move, error) {
 	if p.currentToken().Type == PROMOTION {
 		p.advance()
 		if p.currentToken().Type != PromotionPiece {
-			return nil, errors.New("expected promotion piece")
+			return nil, &ParserError{
+				Message:    "expected promotion piece",
+				TokenType:  p.currentToken().Type,
+				TokenValue: p.currentToken().Value,
+				Position:   p.position,
+			}
 		}
 		moveData.promotion = parsePieceType(p.currentToken().Value)
 		p.advance()
@@ -255,13 +298,19 @@ func (p *Parser) parseMove() (*Move, error) {
 	// Get target square
 	targetSquare := parseSquare(moveData.destSquare)
 	if targetSquare == NoSquare {
-		return nil, errors.New("invalid target square")
+		return nil, &ParserError{
+			Message:    "invalid destination square",
+			TokenType:  p.currentToken().Type,
+			TokenValue: p.currentToken().Value,
+			Position:   p.position,
+		}
 	}
 
 	// Find matching legal move
 	var matchingMove *Move
 	var err error
-	for _, m := range p.game.ValidMoves() {
+	validMoves := p.game.pos.ValidMoves()
+	for _, m := range validMoves {
 		//nolint:nestif // readability
 		if m.S2() == targetSquare {
 			pos := p.game.pos
@@ -269,29 +318,54 @@ func (p *Parser) parseMove() (*Move, error) {
 
 			// Check piece type
 			if moveData.piece != "" && piece.Type() != PieceTypeFromString(moveData.piece) || moveData.piece == "" && piece.Type() != Pawn {
-				err = errors.New("piece type mismatch")
+				err = &ParserError{
+					Message:    "piece type mismatch",
+					TokenType:  p.currentToken().Type,
+					TokenValue: p.currentToken().Value,
+					Position:   p.position,
+				}
 				continue
 			}
 
 			// Check disambiguation
 			if moveData.originFile != "" && m.S1().File().String() != moveData.originFile {
-				err = errors.New("origin file mismatch")
+				err = &ParserError{
+					Message:    "origin file mismatch",
+					TokenType:  p.currentToken().Type,
+					TokenValue: p.currentToken().Value,
+					Position:   p.position,
+				}
 				continue
 			}
-			if moveData.originRank != "" && strconv.Itoa(int('1'+m.S1()/8)) != moveData.originRank {
-				err = errors.New("origin rank mismatch")
+			if moveData.originRank != "" && strconv.Itoa(int((m.S1()/8)+1)) != moveData.originRank {
+				err = &ParserError{
+					Message:    fmt.Sprintf("origin rank mismatch: %d", m.S1()/8+1),
+					TokenType:  p.currentToken().Type,
+					TokenValue: p.currentToken().Value,
+					Position:   p.position,
+				}
 				continue
 			}
 
 			// Check capture
 			if moveData.isCapture != (m.HasTag(Capture) || m.HasTag(EnPassant)) {
-				err = errors.New("capture mismatch")
+				err = &ParserError{
+					Message:    "capture mismatch",
+					TokenType:  p.currentToken().Type,
+					TokenValue: p.currentToken().Value,
+					Position:   p.position,
+				}
 				continue
 			}
 
 			// Check promotion
 			if moveData.promotion != NoPieceType && m.promo != moveData.promotion {
-				err = errors.New("promotion mismatch")
+				err = &ParserError{
+					Message:    "promotion mismatch",
+					TokenType:  p.currentToken().Type,
+					TokenValue: p.currentToken().Value,
+					Position:   p.position,
+				}
 				continue
 			}
 
@@ -302,9 +376,15 @@ func (p *Parser) parseMove() (*Move, error) {
 
 	if matchingMove == nil {
 		if err != nil {
-			return nil, err
+			return nil, &ParserError{
+				Message:  fmt.Sprintf("no legal move found for position: %s", err.Error()),
+				Position: p.position,
+			}
 		}
-		return nil, errors.New("no legal move found for position")
+		return nil, &ParserError{
+			Message:  "no legal move found for position",
+			Position: p.position,
+		}
 	}
 
 	// Copy the matched move details
@@ -335,47 +415,92 @@ func (p *Parser) parseMove() (*Move, error) {
 
 	return move, nil
 }
-func (p *Parser) parseComment() (string, error) {
-	p.advance() // consume {
+
+func (p *Parser) parseComment() (string, map[string]string, error) {
+	p.advance() // Consume "{"
 
 	var comment string
+	var commandMap map[string]string
+
 	for p.currentToken().Type != CommentEnd && p.position < len(p.tokens) {
-		if p.currentToken().Type == CommandStart {
-			command, err := p.parseCommand()
+		switch p.currentToken().Type {
+		case CommandStart:
+			commands, err := p.parseCommand()
 			if err != nil {
-				return "", err
+				return "", nil, err
 			}
-			comment += command
-		} else if p.currentToken().Type == COMMENT {
-			comment += p.currentToken().Value
+
+			// merge commands into commandMap
+			if commandMap == nil {
+				commandMap = make(map[string]string)
+			}
+			for k, v := range commands {
+				commandMap[k] = v
+			}
+
+		case COMMENT:
+			comment += p.currentToken().Value // Append plain comment text
+		default:
+			return "", nil, &ParserError{
+				Message:    "unexpected token in comment",
+				Position:   p.position,
+				TokenType:  p.currentToken().Type,
+				TokenValue: p.currentToken().Value,
+			}
 		}
 		p.advance()
 	}
 
 	if p.position >= len(p.tokens) {
-		return "", errors.New("unterminated comment")
+		return "", nil, &ParserError{
+			Message:  "unterminated comment",
+			Position: p.position,
+		}
 	}
 
-	p.advance() // consume }
-	return comment, nil
+	p.advance() // Consume "}"
+	return comment, commandMap, nil
 }
 
-func (p *Parser) parseCommand() (string, error) {
-	var parts []string
+func (p *Parser) parseCommand() (map[string]string, error) {
+	command := make(map[string]string)
+	var key string
+
+	// Consume the opening "["
+	p.advance()
 
 	for p.currentToken().Type != CommandEnd && p.position < len(p.tokens) {
 		switch p.currentToken().Type {
-		case CommandName, CommandParam:
-			parts = append(parts, p.currentToken().Value)
+
+		case CommandName:
+			// The first token in a command is treated as the key
+			key = p.currentToken().Value
+		case CommandParam:
+			// The second token is treated as the value for the current key
+			if key != "" {
+				command[key] = p.currentToken().Value
+				key = "" // Reset key after assigning value
+			}
+		default:
+			return nil, &ParserError{
+				Message:    "unexpected token in command",
+				Position:   p.position,
+				TokenType:  p.currentToken().Type,
+				TokenValue: p.currentToken().Value,
+			}
 		}
 		p.advance()
 	}
 
 	if p.position >= len(p.tokens) {
-		return "", errors.New("unterminated command")
+		return nil, &ParserError{
+			Message:  "unterminated command",
+			Position: p.position,
+		}
 	}
 
-	return strings.Join(parts, " "), nil
+	// p.advance() // Consume the closing "]"
+	return command, nil
 }
 
 func (p *Parser) parseVariation() error {
@@ -394,12 +519,18 @@ func (p *Parser) parseVariation() error {
 		// the last move before the variation start
 		variationParent = parentMove.parent
 		// Reset position to where the variation starts
-		p.game.pos = variationParent.parent.position.copy()
-		if newPos := p.game.pos.Update(variationParent); newPos != nil {
-			p.game.pos = newPos
+		if variationParent.parent != nil {
+			p.game.pos = variationParent.parent.position.copy()
+			if newPos := p.game.pos.Update(variationParent); newPos != nil {
+				p.game.pos = newPos
+			}
+		} else {
+			p.game.pos = StartingPosition()
 		}
+
 	} else {
-		// Reset to starting position for variations from root
+		// If we're at the start of the game, the variation branches from
+		// the root move
 		p.game.pos = StartingPosition()
 	}
 
@@ -421,9 +552,17 @@ func (p *Parser) parseVariation() error {
 			p.advance()
 			isBlackMove = true
 
+		case VariationStart:
+			if err := p.parseVariation(); err != nil {
+				return err
+			}
+
 		case PIECE, SQUARE, FILE, KingsideCastle, QueensideCastle:
 			if isBlackMove != (p.game.pos.Turn() == Black) {
-				return errors.New("move number mismatch")
+				return &ParserError{
+					Message:  "move color mismatch",
+					Position: p.position,
+				}
 			}
 
 			move, err := p.parseMove()
@@ -443,6 +582,8 @@ func (p *Parser) parseVariation() error {
 				p.game.pos = newPos
 			}
 
+			move.position = p.game.pos.copy()
+
 			// Update current move pointer
 			p.currentMove = move
 			isBlackMove = !isBlackMove
@@ -453,7 +594,10 @@ func (p *Parser) parseVariation() error {
 	}
 
 	if p.position >= len(p.tokens) {
-		return errors.New("unterminated variation")
+		return &ParserError{
+			Message:  "unterminated variation",
+			Position: p.position,
+		}
 	}
 
 	p.advance() // consume )
@@ -461,6 +605,7 @@ func (p *Parser) parseVariation() error {
 	// Restore original state
 	p.game.pos = oldPos
 	p.currentMove = parentMove
+	p.game.currentMove = p.currentMove
 
 	return nil
 }
