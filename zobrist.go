@@ -35,7 +35,7 @@ func parseHexString(s string) Hash {
 	result := make([]byte, len(s)/2)
 	for i := 0; i < len(s); i += 2 {
 		var value byte
-		fmt.Sscanf(s[i:i+2], "%02x", &value)
+		_, _ = fmt.Sscanf(s[i:i+2], "%02x", &value)
 		result[i/2] = value
 	}
 	return result
@@ -45,7 +45,7 @@ func parseHexString(s string) Hash {
 func createHexString(h Hash) string {
 	var sb strings.Builder
 	for _, b := range h {
-		fmt.Fprintf(&sb, "%02x", b)
+		_, _ = fmt.Fprintf(&sb, "%02x", b)
 	}
 	return sb.String()
 }
