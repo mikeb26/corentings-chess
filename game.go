@@ -253,8 +253,6 @@ func (g *Game) Comments() [][]string {
 }
 
 // Position returns the game's current position.
-// Deprecated: Use CurrentPosition() instead.
-// This method will be removed in a future release.
 func (g *Game) Position() *Position {
 	return g.pos
 }
