@@ -66,8 +66,9 @@ func (m *Move) addTag(tag MoveTag) {
 	m.tags |= tag
 }
 
-func (m *Move) GetCommand(key string) string {
-	return m.command[key]
+func (m *Move) GetCommand(key string) (string, bool) {
+	value, ok := m.command[key]
+	return value, ok
 }
 
 func (m *Move) SetCommand(key, value string) {
