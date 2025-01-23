@@ -1,5 +1,7 @@
 package chess
 
+import "strings"
+
 // A MoveTag represents a notable consequence of a move.
 type MoveTag uint16
 
@@ -62,4 +64,47 @@ func (m *Move) HasTag(tag MoveTag) bool {
 
 func (m *Move) addTag(tag MoveTag) {
 	m.tags |= tag
+}
+
+func (m *Move) GetCommand(key string) string {
+	return m.command[key]
+}
+
+func (m *Move) SetCommand(key, value string) {
+	m.command[key] = value
+}
+
+func (m *Move) AddComment(comment string) {
+	comments := strings.Builder{}
+	comments.WriteString(m.comments)
+	comments.WriteString(comment)
+	m.comments = comments.String()
+}
+
+func (m *Move) Comments() string {
+	return m.comments
+}
+
+func (m *Move) NAG() string {
+	return m.nag
+}
+
+func (m *Move) SetNAG(nag string) {
+	m.nag = nag
+}
+
+func (m *Move) Parent() *Move {
+	return m.parent
+}
+
+func (m *Move) Position() *Position {
+	return m.position
+}
+
+func (m *Move) Children() []*Move {
+	return m.children
+}
+
+func (m *Move) Number() uint {
+	return m.number
 }
