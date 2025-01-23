@@ -2,26 +2,17 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
-## 0.1.0 - 2025-01-23
+## 2.0.1 - 2025-01-23
 #### Bug Fixes
 - **(golanci-lint)** 🚨 try to fix some linters warnings (#2) - (44962f6) - Corentin Giaufer Saubert
 - Handle ignored errors in fmt.Sscanf and fmt.Fprintf calls - (651d1d5) - CorentinGS
 - parsing commands and variations - (397e104) - Corentin Giaufer Saubert
-- improved ci - (886c634) - CorentinGS
-- ci - (753ad66) - CorentinGS
-- ci - (5b5bbe7) - CorentinGS
-- ci - (68990d2) - CorentinGS
-- ci - (c15fab9) - CorentinGS
-- ci - (c8b9770) - CorentinGS
 - golang version - (5c88ba1) - CorentinGS
-- Looks like it works well now - (a8a218d) - CorentinGS
 - forgot reference - (7cf9b3e) - CorentinGS
 - linter warnings - (8fa67cf) - CorentinGS
-- linter warnings - (e839e73) - CorentinGS
 - notation convention - (cc7669c) - CorentinGS
 - improve Move allocation and reduce heap allocations - (c9d58c0) - CorentinGS
 - remove map allocation from the loop - (a48f2fd) - CorentinGS
-- reduce allocations using pool - (ab6f981) - CorentinGS
 - reduce allocations - (98fe8e2) - CorentinGS
 - remove string usage which lead to a lot of allocation and replace with much more efficient code - (5b4e482) - CorentinGS
 #### Continuous Integration
