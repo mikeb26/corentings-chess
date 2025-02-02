@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.0.2 - 2025-02-02
+#### Bug Fixes
+- output pgn for game string representation (#19) - (776f4ec) - Corentin Giaufer Saubert
+- 🐛 add support for multiple commands in moves and update dependencies (#16) - (6e2ec58) - Corentin Giaufer Saubert
+- better handling of map - (3ed4f1c) - CorentinGS
+#### Features
+- add tag prefix configuration for version handling - (dbf2007) - CorentinGS
+- add GetRootMove method to retrieve the root move of the game - (81d9023) - CorentinGS
+- add cog for version handling - (8659047) - CorentinGS
+
+- - -
+
 ## 2.0.1 - 2025-01-23
 #### Bug Fixes
 - **(golanci-lint)** 🚨 try to fix some linters warnings (#2) - (44962f6) - Corentin Giaufer Saubert
