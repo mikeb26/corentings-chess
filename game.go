@@ -274,6 +274,11 @@ func (g *Game) Moves() []*Move {
 	return moves[1:] // Skip the root move
 }
 
+// GetRootMove returns the root move of the game.
+func (g *Game) GetRootMove() *Move {
+	return g.rootMove
+}
+
 // Variations returns all alternative moves at the given position.
 func (g *Game) Variations(move *Move) []*Move {
 	if move == nil || len(move.children) <= 1 {
