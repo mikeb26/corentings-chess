@@ -22,8 +22,11 @@ Example usage:
 package chess
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io"
+	"strings"
 )
 
 // A Outcome is the result of a game.
@@ -331,7 +334,140 @@ func (g *Game) FEN() string {
 // String implements the fmt.Stringer interface and returns
 // the game's PGN.
 func (g *Game) String() string {
-	return g.FEN()
+	var sb strings.Builder
+
+	// Write tag pairs.
+	for tag, value := range g.tagPairs {
+		sb.WriteString(fmt.Sprintf("[%s \"%s\"]\n", tag, value))
+	}
+	if len(g.tagPairs) > 0 {
+		sb.WriteString("\n")
+	}
+
+	// Assume g.rootMove is a dummy root (holding the initial position)
+	// and that its first child is the first actual move.
+	if g.rootMove != nil && len(g.rootMove.children) > 0 {
+		writeMoves(g.rootMove, 1, true, &sb, false)
+	}
+
+	// Append the game result.
+	sb.WriteString(g.Outcome().String()) // outcomeString() returns the result as a string (e.g. "1-0")
+	return sb.String()
+}
+
+// writeMoves recursively writes the PGN-formatted move sequence starting from the given move node into the provided strings.Builder.
+// It handles move numbering for white and black moves, encodes moves using algebraic notation based on the appropriate position,
+// and appends comments and command annotations if present. The function distinguishes between main line moves and sub-variations;
+// when processing a sub-variation, moves are enclosed in parentheses.
+//
+// Parameters:
+//   node - pointer to the current move node from which to write moves.
+//   moveNum - the current move number corresponding to white’s moves.
+//   isWhite - true if it is white’s move, false if it is black’s move.
+//   sb - pointer to a strings.Builder where the formatted move notation is appended.
+//   subVariation - true if the current call is within a sub-variation, affecting formatting details.
+//
+// The function recurses through the move tree, writing the main line first and then processing any additional variations,
+// ensuring that the output adheres to standard PGN conventions. Future enhancements may include support for all NAG values.
+func writeMoves(node *Move, moveNum int, isWhite bool, sb *strings.Builder, subVariation bool) {
+	// If no moves remain, stop.
+	if node == nil {
+		return
+	}
+
+	var currentMove *Move
+
+	// The main line is the first child.
+	if subVariation {
+		currentMove = node
+	} else {
+		if len(node.children) == 0 {
+			return // nothing to print if no child exists (should not happen for a proper game)
+		}
+		currentMove = node.children[0]
+	}
+
+	writeMoveNumber(moveNum, isWhite, subVariation, sb)
+
+	// Encode the move using your AlgebraicNotation.
+	writeMoveEncoding(node, currentMove, sb)
+
+	// Append a comment if present.
+	writeComments(currentMove, sb)
+
+	writeCommands(currentMove, sb)
+
+	//TODO: Add support for all nags values in the future
+
+	// if subvariation is over don't add space
+	if !subVariation {
+		sb.WriteString(" ")
+	} else if len(currentMove.children) > 0 {
+		sb.WriteString(" ")
+	}
+
+	// Process any variations (children beyond the first).
+	// In PGN, variations are enclosed in parentheses.
+	writeVariations(node, moveNum, isWhite, sb)
+
+	if len(currentMove.children) > 0 {
+		var nextMoveNum int
+		var nextIsWhite bool
+		if isWhite {
+			// After white’s move, black plays using the same move number.
+			nextMoveNum = moveNum
+			nextIsWhite = false
+		} else {
+			// After black’s move, increment move number.
+			nextMoveNum = moveNum + 1
+			nextIsWhite = true
+		}
+		writeMoves(currentMove, nextMoveNum, nextIsWhite, sb, false)
+	}
+}
+
+func writeMoveNumber(moveNum int, isWhite bool, subVariation bool, sb *strings.Builder) {
+	if isWhite {
+		sb.WriteString(fmt.Sprintf("%d. ", moveNum))
+	} else if subVariation {
+		sb.WriteString(fmt.Sprintf("%d... ", moveNum))
+	}
+}
+
+func writeMoveEncoding(node *Move, currentMove *Move, sb *strings.Builder) {
+	if node.Parent() == nil {
+		sb.WriteString(AlgebraicNotation{}.Encode(node.Position(), currentMove))
+	} else {
+		moveStr := AlgebraicNotation{}.Encode(node.Parent().Position(), currentMove)
+		sb.WriteString(moveStr)
+	}
+}
+
+func writeComments(move *Move, sb *strings.Builder) {
+	if move.comments != "" {
+		sb.WriteString(" {" + move.comments + "}")
+	}
+}
+
+func writeCommands(move *Move, sb *strings.Builder) {
+	if len(move.command) > 0 {
+		sb.WriteString(" {")
+		for key, value := range move.command {
+			sb.WriteString(" [%" + key + " " + value + "]")
+		}
+		sb.WriteString(" }")
+	}
+}
+
+func writeVariations(node *Move, moveNum int, isWhite bool, sb *strings.Builder) {
+	if len(node.children) > 1 {
+		for i := 1; i < len(node.children); i++ {
+			variation := node.children[i]
+			sb.WriteString("(")
+			writeMoves(variation, moveNum, isWhite, sb, true)
+			sb.WriteString(") ")
+		}
+	}
 }
 
 // MarshalText implements the encoding.TextMarshaler interface and
@@ -340,10 +476,18 @@ func (g *Game) MarshalText() ([]byte, error) {
 	return []byte(g.String()), nil
 }
 
-// UnmarshalText implements the encoding.TextUnarshaler interface and
+// UnmarshalText implements the encoding.TextUnmarshaler interface and
 // assumes the data is in the PGN format.
-func (g *Game) UnmarshalText(_ []byte) error {
-	return errors.New("chess: unmarshal text not implemented")
+func (g *Game) UnmarshalText(text []byte) error {
+	r := bytes.NewReader(text)
+
+	toGame, err := PGN(r)
+	if err != nil {
+		return err
+	}
+	toGame(g)
+
+	return nil
 }
 
 // Draw attempts to draw the game by the given method.  If the
