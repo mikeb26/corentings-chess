@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.0.3 - 2025-02-04
+#### Bug Fixes
+- game.String() respects the defined order (#23) - (17ab924) - Sönke Werner Köster
+#### Features
+- update move number handling to use int type and improve parsing logic (#25) - (7e9b22e) - Corentin Giaufer Saubert
+- implement UCI conversion for castling moves in polyglot - (ebe4434) - CorentinGS
+
+- - -
+
 ## v2.0.2 - 2025-02-02
 #### Bug Fixes
 - output pgn for game string representation (#19) - (776f4ec) - Corentin Giaufer Saubert
