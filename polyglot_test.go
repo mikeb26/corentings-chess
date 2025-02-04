@@ -440,7 +440,49 @@ func TestPolyglotMoveToMoveConversion(t *testing.T) {
 			},
 			expected: Move{
 				s1:    E1,
-				s2:    H1,
+				s2:    G1,
+				promo: NoPieceType,
+				tags:  KingSideCastle,
+			},
+		},
+		{
+			name: "Long castling move",
+			polyMove: PolyglotMove{
+				FromFile: 4, FromRank: 0,
+				ToFile: 0, ToRank: 0,
+				Promotion: 0, CastlingMove: true,
+			},
+			expected: Move{
+				s1:    E1,
+				s2:    C1,
+				promo: NoPieceType,
+				tags:  QueenSideCastle,
+			},
+		},
+		{
+			name: "Long castling move black",
+			polyMove: PolyglotMove{
+				FromFile: 4, FromRank: 7,
+				ToFile: 0, ToRank: 7,
+				Promotion: 0, CastlingMove: true,
+			},
+			expected: Move{
+				s1:    E8,
+				s2:    C8,
+				promo: NoPieceType,
+				tags:  QueenSideCastle,
+			},
+		},
+		{
+			name: "castling  move black",
+			polyMove: PolyglotMove{
+				FromFile: 4, FromRank: 7,
+				ToFile: 7, ToRank: 7,
+				Promotion: 0, CastlingMove: true,
+			},
+			expected: Move{
+				s1:    E8,
+				s2:    G8,
 				promo: NoPieceType,
 				tags:  KingSideCastle,
 			},

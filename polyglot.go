@@ -81,6 +81,22 @@ func (pm PolyglotMove) Encode() uint16 {
 	return encoded
 }
 
+func convertPolyglotCastleToUCI(from, to string) (string, string) {
+	if from == "e1" && to == "h1" {
+		return "e1", "g1"
+	}
+	if from == "e1" && to == "a1" {
+		return "e1", "c1"
+	}
+	if from == "e8" && to == "h8" {
+		return "e8", "g8"
+	}
+	if from == "e8" && to == "a8" {
+		return "e8", "c8"
+	}
+	return from, to
+}
+
 func (pm PolyglotMove) ToMove() Move {
 	fromSquare := fmt.Sprintf("%c%d", 'a'+pm.FromFile, pm.FromRank+1)
 	toSquare := fmt.Sprintf("%c%d", 'a'+pm.ToFile, pm.ToRank+1)
@@ -97,6 +113,9 @@ func (pm PolyglotMove) ToMove() Move {
 	default:
 		promo = ""
 	}
+	if pm.CastlingMove {
+		fromSquare, toSquare = convertPolyglotCastleToUCI(fromSquare, toSquare)
+	}
 	moveStr := fromSquare + toSquare + promo
 
 	decode, err := UCINotation{}.Decode(nil, moveStr)
@@ -105,7 +124,7 @@ func (pm PolyglotMove) ToMove() Move {
 	}
 
 	if pm.CastlingMove {
-		if pm.FromFile == 4 && pm.ToFile == 0 {
+		if pm.FromFile == 4 && pm.ToFile == 0 || pm.ToFile == 2 && pm.FromFile == 4 {
 			decode.addTag(QueenSideCastle)
 		} else {
 			decode.addTag(KingSideCastle)
