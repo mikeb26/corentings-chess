@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.0.4 - 2025-02-05
+#### Features
+- improve perf and uci notation (#26) - (85f540d) - Corentin Giaufer Saubert
+
+- - -
+
 ## v2.0.3 - 2025-02-04
 #### Bug Fixes
 - game.String() respects the defined order (#23) - (17ab924) - Sönke Werner Köster
