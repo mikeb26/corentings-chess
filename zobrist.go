@@ -1,9 +1,9 @@
 package chess
 
 import (
+	"encoding/hex"
 	"errors"
-	"fmt"
-	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -42,42 +42,58 @@ func NewZobristHasher() *ZobristHasher {
 	}
 }
 
-// parseHexString converts a hex string to a byte slice
+// parseHexString converts a hex string to a byte slice efficiently
 func parseHexString(s string) Hash {
-	result := make([]byte, len(s)/2)
-	for i := 0; i < len(s); i += 2 {
-		var value byte
-		_, _ = fmt.Sscanf(s[i:i+2], "%02x", &value)
-		result[i/2] = value
+	// Ensure the input has an even length
+	if len(s)%2 != 0 {
+		return nil // Handle invalid input
 	}
+
+	// Use a preallocated buffer for zero allocations
+	result := make([]byte, len(s)/2)
+	_, err := hex.Decode(result, []byte(s))
+	if err != nil {
+		return nil // Handle invalid hex string
+	}
+
 	return result
 }
 
-// createHexString converts a byte slice to a hex string
+// createHexString converts a byte slice to a hex string efficiently
 func createHexString(h Hash) string {
-	var sb strings.Builder
-	for _, b := range h {
-		_, _ = fmt.Fprintf(&sb, "%02x", b)
-	}
-	return sb.String()
+	return hex.EncodeToString(h)
 }
 
-// xorArrays performs bitwise XOR between two byte slices
-func xorArrays(a, b Hash) Hash {
+func xorArrays(a, b Hash) {
 	length := len(a)
 	if len(b) < length {
 		length = len(b)
 	}
-	result := make(Hash, length)
 	for i := 0; i < length; i++ {
-		result[i] = a[i] ^ b[i]
+		a[i] ^= b[i] // XOR in place, avoiding new slice allocation
 	}
-	return result
 }
 
-// xorHash performs XOR operation with a polyglot hash value
-func (ch *ZobristHasher) xorHash(arr Hash, num int) Hash {
-	return xorArrays(arr, parseHexString(GetPolyglotHashes()[num]))
+func xorArraysInto(a, b, out Hash) {
+	length := len(a)
+	if len(b) < length {
+		length = len(b)
+	}
+	if len(out) < length {
+		panic("output buffer too small")
+	}
+	for i := 0; i < length; i++ {
+		out[i] = a[i] ^ b[i]
+	}
+}
+
+// xorHash performs an in-place XOR operation on a hash
+func (ch *ZobristHasher) xorHash(arr Hash, num int) {
+	// Get the precomputed Polyglot hash as a byte slice
+	polyglotHash := GetPolyglotHashBytes(num)
+
+	// Perform in-place XOR
+	xorArrays(arr, polyglotHash)
 }
 
 // parseEnPassant processes the en passant square
@@ -106,7 +122,7 @@ func (ch *ZobristHasher) parseEnPassant(s string) {
 // hashSide computes the hash for the side to move
 func (ch *ZobristHasher) hashSide(arr Hash, color Color) Hash {
 	if color == White {
-		return ch.xorHash(arr, 780)
+		ch.xorHash(arr, 780)
 	}
 	return arr
 }
@@ -118,16 +134,16 @@ func (ch *ZobristHasher) hashCastling(arr Hash, s string) Hash {
 	}
 
 	if strings.Contains(s, "K") {
-		arr = ch.xorHash(arr, 768)
+		ch.xorHash(arr, 768)
 	}
 	if strings.Contains(s, "Q") {
-		arr = ch.xorHash(arr, 769)
+		ch.xorHash(arr, 769)
 	}
 	if strings.Contains(s, "k") {
-		arr = ch.xorHash(arr, 770)
+		ch.xorHash(arr, 770)
 	}
 	if strings.Contains(s, "q") {
-		arr = ch.xorHash(arr, 771)
+		ch.xorHash(arr, 771)
 	}
 
 	return arr
@@ -148,7 +164,7 @@ func (ch *ZobristHasher) hashPieces(arr Hash, s string) Hash {
 			piece := ranks[i][j]
 			switch piece {
 			case 'p':
-				arr = ch.xorHash(arr, 8*rank+file)
+				ch.xorHash(arr, 8*rank+file)
 				if ch.enPassantRank == 2 && rank == 3 && ch.enPassantFile > 0 && file == ch.enPassantFile-1 {
 					ch.pawnNearby = true
 				}
@@ -157,7 +173,7 @@ func (ch *ZobristHasher) hashPieces(arr Hash, s string) Hash {
 				}
 				file++
 			case 'P':
-				arr = ch.xorHash(arr, 64*1+8*rank+file)
+				ch.xorHash(arr, 64*1+8*rank+file)
 				if ch.enPassantRank == 5 && rank == 4 && ch.enPassantFile > 0 && file == ch.enPassantFile-1 {
 					ch.pawnNearby = true
 				}
@@ -166,34 +182,34 @@ func (ch *ZobristHasher) hashPieces(arr Hash, s string) Hash {
 				}
 				file++
 			case 'n':
-				arr = ch.xorHash(arr, 64*2+8*rank+file)
+				ch.xorHash(arr, 64*2+8*rank+file)
 				file++
 			case 'N':
-				arr = ch.xorHash(arr, 64*3+8*rank+file)
+				ch.xorHash(arr, 64*3+8*rank+file)
 				file++
 			case 'b':
-				arr = ch.xorHash(arr, 64*4+8*rank+file)
+				ch.xorHash(arr, 64*4+8*rank+file)
 				file++
 			case 'B':
-				arr = ch.xorHash(arr, 64*5+8*rank+file)
+				ch.xorHash(arr, 64*5+8*rank+file)
 				file++
 			case 'r':
-				arr = ch.xorHash(arr, 64*6+8*rank+file)
+				ch.xorHash(arr, 64*6+8*rank+file)
 				file++
 			case 'R':
-				arr = ch.xorHash(arr, 64*7+8*rank+file)
+				ch.xorHash(arr, 64*7+8*rank+file)
 				file++
 			case 'q':
-				arr = ch.xorHash(arr, 64*8+8*rank+file)
+				ch.xorHash(arr, 64*8+8*rank+file)
 				file++
 			case 'Q':
-				arr = ch.xorHash(arr, 64*9+8*rank+file)
+				ch.xorHash(arr, 64*9+8*rank+file)
 				file++
 			case 'k':
-				arr = ch.xorHash(arr, 64*10+8*rank+file)
+				ch.xorHash(arr, 64*10+8*rank+file)
 				file++
 			case 'K':
-				arr = ch.xorHash(arr, 64*11+8*rank+file)
+				ch.xorHash(arr, 64*11+8*rank+file)
 				file++
 			case '1', '2', '3', '4', '5', '6', '7', '8':
 				file += int(piece - '0')
@@ -216,18 +232,23 @@ func (ch *ZobristHasher) HashPosition(fen string) (string, error) {
 	ch.enPassantFile = -1
 	ch.pawnNearby = false
 
-	// Validate FEN format
-	validFEN := regexp.MustCompile(`^([rnbqkpRNBQKP1-8]+\/){7}[rnbqkpRNBQKP1-8]+ [wb] [KQkq-]{1,4} [a-h1-8-]{1,2} \d+ \d+$`)
-	if !validFEN.MatchString(fen) {
-		return "", fmt.Errorf("invalid FEN format")
-	}
-
-	parts := strings.Fields(strings.TrimSpace(fen))
+	// FEN should have at least 4 parts
+	parts := strings.SplitN(fen, " ", 5)
 	if len(parts) < 4 {
 		return "", errors.New("invalid FEN format")
 	}
 
 	pieces, color, castling, enPassant := parts[0], parts[1], parts[2], parts[3]
+
+	// Quick validation without regex
+	if len(color) != 1 || (color[0] != 'w' && color[0] != 'b') {
+		return "", errors.New("invalid side to move")
+	}
+
+	if len(castling) > 4 {
+		return "", errors.New("invalid castling rights")
+	}
+
 	hash := make(Hash, len(emptyHash))
 	copy(hash, emptyHash)
 
@@ -235,7 +256,7 @@ func (ch *ZobristHasher) HashPosition(fen string) (string, error) {
 	hash = ch.hashPieces(hash, pieces)
 
 	if ch.pawnNearby {
-		hash = ch.xorHash(hash, 772+ch.enPassantFile)
+		ch.xorHash(hash, 772+ch.enPassantFile)
 	}
 
 	hash = ch.hashSide(hash, ColorFromString(color))
@@ -249,16 +270,16 @@ func (ch *ZobristHasher) HashPosition(fen string) (string, error) {
 }
 
 func ZobristHashToUint64(hash string) uint64 {
-	var result uint64
-
 	// Ensure the input is exactly 16 hex digits
 	if len(hash) != 16 {
 		return 0
 	}
 
-	// Try to parse the hash
-	if _, err := fmt.Sscanf(hash, "%016x", &result); err != nil {
+	// Convert directly using `strconv.ParseUint`
+	result, err := strconv.ParseUint(hash, 16, 64)
+	if err != nil {
 		return 0
+
 	}
 
 	return result

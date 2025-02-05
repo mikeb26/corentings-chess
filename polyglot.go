@@ -81,42 +81,36 @@ func (pm PolyglotMove) Encode() uint16 {
 	return encoded
 }
 
-func convertPolyglotCastleToUCI(from, to string) (string, string) {
-	if from == "e1" && to == "h1" {
-		return "e1", "g1"
+func convertPolyglotCastleToUCI(fromFile, toFile, rank byte) (byte, byte, byte, byte) {
+	if fromFile == 'e' {
+		switch toFile {
+		case 'h':
+			return 'e', rank, 'g', rank // King-side
+		case 'a':
+			return 'e', rank, 'c', rank // Queen-side
+		}
 	}
-	if from == "e1" && to == "a1" {
-		return "e1", "c1"
-	}
-	if from == "e8" && to == "h8" {
-		return "e8", "g8"
-	}
-	if from == "e8" && to == "a8" {
-		return "e8", "c8"
-	}
-	return from, to
+	return fromFile, rank, toFile, rank
 }
 
 func (pm PolyglotMove) ToMove() Move {
-	fromSquare := fmt.Sprintf("%c%d", 'a'+pm.FromFile, pm.FromRank+1)
-	toSquare := fmt.Sprintf("%c%d", 'a'+pm.ToFile, pm.ToRank+1)
-	var promo string
-	switch pm.Promotion {
-	case 1:
-		promo = "n"
-	case 2:
-		promo = "b"
-	case 3:
-		promo = "r"
-	case 4:
-		promo = "q"
-	default:
-		promo = ""
-	}
+	var moveBuf [5]byte
+	moveBuf[0] = 'a' + byte(pm.FromFile)
+	moveBuf[1] = '1' + byte(pm.FromRank)
+	moveBuf[2] = 'a' + byte(pm.ToFile)
+	moveBuf[3] = '1' + byte(pm.ToRank)
+
 	if pm.CastlingMove {
-		fromSquare, toSquare = convertPolyglotCastleToUCI(fromSquare, toSquare)
+		moveBuf[0], moveBuf[1], moveBuf[2], moveBuf[3] = convertPolyglotCastleToUCI(moveBuf[0], moveBuf[2], moveBuf[1])
 	}
-	moveStr := fromSquare + toSquare + promo
+
+	var moveStr string
+	if pm.Promotion > 0 && pm.Promotion <= 4 {
+		moveBuf[4] = " nbrq"[pm.Promotion] // Promotion lookup
+		moveStr = string(moveBuf[:5])
+	} else {
+		moveStr = string(moveBuf[:4])
+	}
 
 	decode, err := UCINotation{}.Decode(nil, moveStr)
 	if err != nil {
@@ -124,10 +118,10 @@ func (pm PolyglotMove) ToMove() Move {
 	}
 
 	if pm.CastlingMove {
-		if pm.FromFile == 4 && pm.ToFile == 0 || pm.ToFile == 2 && pm.FromFile == 4 {
-			decode.addTag(QueenSideCastle)
+		if pm.FromFile == 4 && (pm.ToFile == 0 || pm.ToFile == 2) {
+			decode.AddTag(QueenSideCastle)
 		} else {
-			decode.addTag(KingSideCastle)
+			decode.AddTag(KingSideCastle)
 		}
 	}
 
@@ -503,7 +497,7 @@ func (book *PolyglotBook) GetChessMoves(positionHash uint64) ([]Move, error) {
 }
 
 func (book *PolyglotBook) ToMoveMap() map[uint64][]MoveWithWeight {
-	result := make(map[uint64][]MoveWithWeight)
+	result := make(map[uint64][]MoveWithWeight, len(book.entries))
 	for _, entry := range book.entries {
 		pm := DecodeMove(entry.Move)
 		move := pm.ToMove()
