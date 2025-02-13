@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.0.5 - 2025-02-13
+#### Features
+- enhance position handling in notation decoding (#27) - (e21d500) - Corentin Giaufer Saubert
+- add SetComment method and related tests for Move struct (#28) - (7b215f0) - Corentin Giaufer Saubert
+
+- - -
+
 ## v2.0.4 - 2025-02-05
 #### Features
 - improve perf and uci notation (#26) - (85f540d) - Corentin Giaufer Saubert
