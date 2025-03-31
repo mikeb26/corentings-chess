@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.0.6 - 2025-03-31
+#### Features
+- enhance UCI move handling with position context and add tests (#30) - (ce3144c) - Corentin Giaufer Saubert
+
+- - -
+
 ## v2.0.5 - 2025-02-13
 #### Features
 - enhance position handling in notation decoding (#27) - (e21d500) - Corentin Giaufer Saubert
