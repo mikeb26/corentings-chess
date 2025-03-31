@@ -2,6 +2,7 @@ package uci_test
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -20,6 +21,41 @@ var StockfishPath string
 func init() {
 	dir, _ := os.Getwd()
 	StockfishPath = filepath.Join(dir, "..", "stockfish")
+}
+
+func Test_UCIMovesTags(t *testing.T) {
+	t.SkipNow()
+	eng, err := uci.New(StockfishPath, uci.Debug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer eng.Close()
+	setOpt := uci.CmdSetOption{Name: "UCI_Elo", Value: "1500"}
+	setPos := uci.CmdPosition{Position: chess.StartingPosition()}
+	setGo := uci.CmdGo{MoveTime: time.Second / 10}
+	if err := eng.Run(uci.CmdUCI, uci.CmdIsReady, setOpt, uci.CmdUCINewGame, setPos, setGo); err != nil {
+		t.Fatal("failed to run command", err)
+	}
+
+	game := chess.NewGame()
+	notation := chess.AlgebraicNotation{}
+
+	for game.Outcome() == chess.NoOutcome {
+		cmdPos := uci.CmdPosition{Position: game.Position()}
+		cmdGo := uci.CmdGo{MoveTime: time.Second / 100}
+		if err2 := eng.Run(cmdPos, cmdGo); err2 != nil {
+			t.Fatal("failed to run command", err2)
+		}
+
+		move := eng.SearchResults().BestMove
+		pos := game.Position()
+		san := notation.Encode(pos, move)
+
+		err = game.PushMove(san, nil)
+		if err != nil {
+			t.Fatal(fmt.Sprintf("failed to push move %s - %s - %v. Pos: %s", san, move.String(), move.HasTag(chess.Capture), pos.String()), err)
+		}
+	}
 }
 
 func TestLogger(t *testing.T) {
