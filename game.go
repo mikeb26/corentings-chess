@@ -735,6 +735,8 @@ type PushMoveOptions struct {
 	ForceMainline bool
 }
 
+// Deprecated: use PushNotationMove instead.
+//
 // PushMove adds a move in algebraic notation to the game.
 // Returns an error if the move is invalid.
 //
@@ -758,6 +760,54 @@ func (g *Game) PushMove(algebraicMove string, options *PushMoveOptions) error {
 	g.currentMove = move
 
 	// Add this line to evaluate the position after the move
+	g.evaluatePositionStatus()
+
+	return nil
+}
+
+// PushNotationMove adds a move to the game using any supported notation.
+// It returns an error if the move is invalid.
+//
+// Example:
+//
+//	err := game.PushNotationMove("e4", chess.AlgebraicNotation{}, &PushMoveOptions{ForceMainline: true})
+//	if err != nil {
+//	  panic(err)
+//	}
+//
+//	game.PushNotationMove("c7c5", chess.UCINotation{}, nil)
+//	game.PushNotationMove("Nc1f3", chess.LongAlgebraicNotation{}, nil)
+func (g *Game) PushNotationMove(moveStr string, notation Notation, options *PushMoveOptions) error {
+	move, err := notation.Decode(g.pos, moveStr)
+	if err != nil {
+		return err
+	}
+
+	return g.Move(move, options)
+}
+
+// Move method adds a move to the game using a Move struct.
+// It returns an error if the move is invalid.
+//
+// Example:
+//
+//	possibleMove := game.ValidMoves()[0]
+//
+//	err := game.Move(&possibleMove, nil)
+//	if err != nil {
+//	    panic(err)
+//	}
+func (g *Game) Move(move *Move, options *PushMoveOptions) error {
+	if options == nil {
+		options = &PushMoveOptions{}
+	}
+
+	existingMove := g.findExistingMove(move)
+	g.addOrReorderMove(move, existingMove, options.ForceMainline)
+
+	g.updatePosition(move)
+	g.currentMove = move
+
 	g.evaluatePositionStatus()
 
 	return nil
