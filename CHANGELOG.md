@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.0.7 - 2025-04-16
+#### Bug Fixes
+- handle castle tags correctly (#35) - (75912a7) - Tiago Gottardo
+#### Features
+- support multiple move notations via PushNotationMove (#33) - (4ae9552) - Tiago Gottardo
+
+- - -
+
 ## v2.0.6 - 2025-03-31
 #### Features
 - enhance UCI move handling with position context and add tests (#30) - (ce3144c) - Corentin Giaufer Saubert
