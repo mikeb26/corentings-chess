@@ -2,6 +2,10 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.0.8 - 2025-05-13
+
+- - -
+
 ## v2.0.7 - 2025-04-16
 #### Bug Fixes
 - handle castle tags correctly (#35) - (75912a7) - Tiago Gottardo
