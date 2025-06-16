@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.0.9 - 2025-06-16
+#### Bug Fixes
+- PGN parser (#45) - (2246d84) - Corentin Giaufer Saubert
+
+- - -
+
 ## v2.0.8 - 2025-05-13
 
 - - -
