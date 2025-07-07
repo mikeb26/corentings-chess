@@ -8,7 +8,7 @@ import (
 	"github.com/corentings/chess/v2/opening"
 )
 
-func ExampleFind() {
+func Find() {
 	g := chess.NewGame()
 	_ = g.PushMove("e4", nil)
 	_ = g.PushMove("e6", nil)
@@ -21,7 +21,7 @@ func ExampleFind() {
 	// Output: French Defense
 }
 
-func ExamplePossible() {
+func Possible() {
 	g := chess.NewGame()
 	_ = g.PushMove("e4", nil)
 	_ = g.PushMove("d5", nil)
