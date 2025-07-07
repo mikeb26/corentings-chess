@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.0.10 - 2025-07-07
+#### Bug Fixes
+- ambiguous moves in PGN; Add PGN test case (#47) - (0a2700b) - TheNipanen
+
+- - -
+
 ## v2.0.9 - 2025-06-16
 #### Bug Fixes
 - PGN parser (#45) - (2246d84) - Corentin Giaufer Saubert
