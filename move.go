@@ -147,3 +147,30 @@ func (m *Move) Ply() int {
 	// After the move, it's Black's turn, so the move was by White
 	return (moveNumber)*2 + 0
 }
+
+// Clone returns a deep copy of a move.
+//
+// Per-field exceptions:
+//
+//	parent: not copied; the clone'd move has no parent
+//	children: not copied; the clone'd move has no children
+func (m *Move) Clone() *Move {
+	ret := &Move{}
+	ret.parent = nil
+	ret.position = m.position.copy()
+	ret.nag = m.nag
+	ret.comments = m.comments
+	ret.children = make([]*Move, 0)
+	ret.number = m.number
+	ret.tags = m.tags
+	ret.s1 = m.s1
+	ret.s2 = m.s2
+	ret.promo = m.promo
+
+	ret.command = make(map[string]string)
+	for k, v := range m.command {
+		ret.command[k] = v
+	}
+
+	return ret
+}

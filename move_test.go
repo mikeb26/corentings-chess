@@ -439,3 +439,68 @@ func moveIsValid(pos *Position, m *Move, useTags bool) bool {
 	}
 	return false
 }
+
+func assertMovesAreEqual(t *testing.T, m1, m2 *Move) {
+	if m1.parent != m2.parent {
+		t.Fatalf("cloned mv %s parent is not the same", m1)
+	}
+	if m1.position.String() != m2.position.String() {
+		t.Fatalf("cloned mv %s position is not the same", m1)
+	}
+	if m1.nag != m2.nag {
+		t.Fatalf("cloned mv %s nag is not the same", m1)
+	}
+	if m1.comments != m2.comments {
+		t.Fatalf("cloned mv %s comments is not the same", m1)
+	}
+	if m1.number != m2.number {
+		t.Fatalf("cloned mv %s number is not the same", m1)
+	}
+	if m1.tags != m2.tags {
+		t.Fatalf("cloned mv %s tags is not the same", m1)
+	}
+	if m1.s1 != m2.s1 {
+		t.Fatalf("cloned mv %s s1 is not the same", m1)
+	}
+	if m1.s2 != m2.s2 {
+		t.Fatalf("cloned mv %s s2 is not the same", m1)
+	}
+	if m1.promo != m2.promo {
+		t.Fatalf("cloned mv %s s2 is not the same", m1)
+	}
+
+	if len(m1.command) != len(m2.command) {
+		t.Fatalf("cloned mv %s len(command) is not the same", m1)
+	} else {
+		for k, v1 := range m1.command {
+			v2, ok := m2.command[k]
+			if !ok || v2 != v1 {
+				t.Fatalf("cloned mv %s command[%v] is not the same", m1, k)
+			}
+		}
+	}
+	if len(m1.children) != len(m2.children) {
+		t.Fatalf("cloned mv %s len(command) is not the same", m1)
+	} else {
+		for idx, c1 := range m1.children {
+			c2 := m2.children[idx]
+			assertMovesAreEqual(t, c1, c2)
+		}
+	}
+}
+
+func TestMoveClone(t *testing.T) {
+	for _, mt := range validMoves {
+		mt.m.position = mt.pos
+		clonedM1 := mt.m.Clone()
+		assertMovesAreEqual(t, mt.m, clonedM1)
+		clonedM1.SetCommand("foo", "bar")
+		clonedM2 := clonedM1.Clone()
+		assertMovesAreEqual(t, clonedM1, clonedM2)
+		clonedM1.SetCommand("foo", "bar modified")
+		fooVal, ok := clonedM2.GetCommand("foo")
+		if !ok || fooVal != "bar" {
+			t.Fatalf("cloned mv %s is not a deep copy", clonedM2)
+		}
+	}
+}
