@@ -120,8 +120,12 @@ func (m *Move) Children() []*Move {
 }
 
 func (m *Move) Number() int {
-	//return m.MoveNumber()
-	return int(m.number)
+	ret := int(m.number)
+	if ret == 0 { // 0 indicates the 'dummy' rootMove
+		ret = 1
+	}
+
+	return ret
 
 }
 
