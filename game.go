@@ -884,3 +884,67 @@ func (g *Game) updatePosition(move *Move) {
 		move.position = newPos
 	}
 }
+
+// Split takes a Game with a main line and 0 or more variations and returns a
+// slice of Games (one for each variation), each containing exactly only a main
+// line and 0 variations
+func (g *Game) Split() []*Game {
+	// Collect all move paths starting from the root's children
+	var paths [][]*Move
+	for _, m := range g.rootMove.children {
+		for _, p := range collectPaths(m) {
+			paths = append(paths, p)
+		}
+	}
+
+	// Build a Game for each path
+	var games []*Game
+	for _, path := range paths {
+		newG := g.buildOneGameFromPath(path)
+		games = append(games, newG)
+	}
+
+	return games
+}
+
+// collectPaths returns all paths from the given move to each leaf node.
+// Each path is represented as a slice of *Move, starting with the given node
+// and ending with a leaf (a move with no children).
+func collectPaths(node *Move) [][]*Move {
+	if node == nil {
+		return nil
+	}
+	// If leaf, return a single path containing this node
+	if len(node.children) == 0 {
+		return [][]*Move{{node}}
+	}
+	// Otherwise, collect paths from each child and prepend this node
+	var paths [][]*Move
+	for _, c := range node.children {
+		childPaths := collectPaths(c)
+		for _, p := range childPaths {
+			path := append([]*Move{node}, p...)
+			paths = append(paths, path)
+		}
+	}
+	return paths
+}
+
+func (g *Game) buildOneGameFromPath(path []*Move) *Game {
+	rootMove := &Move{position: g.rootMove.position.copy()}
+	cur := rootMove
+
+	for _, m := range path {
+		child := m.Clone()
+		child.parent = cur
+
+		cur.children = []*Move{child}
+		cur = child
+	}
+
+	newG := g.Clone()
+	newG.rootMove = rootMove
+	newG.currentMove = cur
+
+	return newG
+}

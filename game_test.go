@@ -1213,3 +1213,65 @@ func FuzzTestPushNotationMove(f *testing.F) {
 		_ = game.PushNotationMove(move, notation, nil)
 	})
 }
+
+func validateSplit(t *testing.T, origPgn string, expectedLastLines []string) {
+	reader := strings.NewReader(origPgn)
+	scanner := NewScanner(reader)
+	scannedGame, err := scanner.ScanGame()
+	if err != nil {
+		t.Fatalf("fail to scan game: %s", err.Error())
+	}
+	tokens, err := TokenizeGame(scannedGame)
+	if err != nil {
+		t.Fatalf("fail to tokenize game: %s", err.Error())
+	}
+	parser := NewParser(tokens)
+	game, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("fail to read games: %s", err.Error())
+	}
+	if game == nil {
+		t.Fatalf("game is nil")
+	}
+
+	splitGames := game.Split()
+	if len(expectedLastLines) != len(splitGames) {
+		t.Fatalf("expected %v split games but got %v", len(expectedLastLines),
+			len(splitGames))
+	}
+
+	for idx, g := range game.Split() {
+		lines := strings.Split(g.String(), "\n")
+		if len(lines) == 0 {
+			t.Fatalf("split game %v output blank", idx)
+		}
+
+		lastLine := lines[len(lines)-1]
+		if lastLine != expectedLastLines[idx] {
+			t.Errorf("game output not correct\n\tExpected:'%v'\n\tGot:     '%v'\n",
+				expectedLastLines[idx], lastLine)
+		}
+	}
+}
+
+func TestGameSplitVar(t *testing.T) {
+	expectedLastLines := []string{
+		"1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4 *",
+		"1. e4 e5 2. Nc3 Nf6 3. f4 *",
+		"1. e4 d6 2. d4 Nf6 3. Nc3 e5 4. dxe5 dxe5 5. Qxd8+ Kxd8 *",
+		"1. e4 d6 2. d4 Nf6 3. Nc3 e5 4. Nf3 Nbd7 *",
+		"1. e3 e5 *",
+	}
+
+	pgn := mustParsePGN("fixtures/pgns/variations.pgn")
+	validateSplit(t, pgn, expectedLastLines)
+}
+
+func TestGameSplitNoVar(t *testing.T) {
+	expectedLastLines := []string{
+		"1. e4 e5 2. Nf3 Nc6 *",
+	}
+
+	pgn := "[Event \"SomeEvent\"]\n1. e4 e5 2. Nf3 Nc6\n\n"
+	validateSplit(t, pgn, expectedLastLines)
+}
