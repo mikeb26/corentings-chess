@@ -1217,19 +1217,11 @@ func FuzzTestPushNotationMove(f *testing.F) {
 func validateSplit(t *testing.T, origPgn string, expectedLastLines []string) {
 	reader := strings.NewReader(origPgn)
 	scanner := NewScanner(reader)
-	scannedGame, err := scanner.ScanGame()
+	game, err := scanner.ParseNext()
 	if err != nil {
-		t.Fatalf("fail to scan game: %s", err.Error())
+		t.Fatalf("fail to parse game: %s", err.Error())
 	}
-	tokens, err := TokenizeGame(scannedGame)
-	if err != nil {
-		t.Fatalf("fail to tokenize game: %s", err.Error())
-	}
-	parser := NewParser(tokens)
-	game, err := parser.Parse()
-	if err != nil {
-		t.Fatalf("fail to read games: %s", err.Error())
-	}
+
 	if game == nil {
 		t.Fatalf("game is nil")
 	}
