@@ -685,19 +685,13 @@ func (g *Game) copy(game *Game) {
 
 // Clone returns a deep copy of the game.
 func (g *Game) Clone() *Game {
-	return &Game{
-		tagPairs:             g.tagPairs,
-		rootMove:             g.rootMove,
-		currentMove:          g.currentMove,
-		pos:                  g.pos,
-		outcome:              g.outcome,
-		method:               g.method,
-		comments:             g.Comments(),
-		ignoreAutomaticDraws: g.ignoreAutomaticDraws,
-	}
+	ret := &Game{}
+	ret.copy(g)
+
+	return ret
 }
 
-// Positions returns all positions in the game.
+// Positions returns all positions in the game in the main line.
 // This includes the starting position and all positions after each move.
 func (g *Game) Positions() []*Position {
 	positions := make([]*Position, 0)

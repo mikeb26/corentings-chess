@@ -834,6 +834,13 @@ func TestCloneGameStateWithTagPairs(t *testing.T) {
 	if clone.GetTagPair("Event") != "Test Event" {
 		t.Fatalf("expected tag pair 'Test Event' but got %s", clone.GetTagPair("Event"))
 	}
+
+	// modify original to ensure the clone is a true deep copy
+	original.AddTagPair("Event", "Test Event Modified")
+
+	if clone.GetTagPair("Event") != "Test Event" {
+		t.Fatalf("expected tag pair 'Test Event' but got %s", clone.GetTagPair("Event"))
+	}
 }
 
 func TestResignWhenGameInProgress(t *testing.T) {
