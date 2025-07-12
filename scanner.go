@@ -68,9 +68,26 @@ func TokenizeGame(game *GameScanned) ([]Token, error) {
 // It supports streaming processing of multiple games and proper handling
 // of PGN syntax.
 type Scanner struct {
-	scanner   *bufio.Scanner
-	nextGame  *GameScanned // Buffer for peeked game
-	lastError error        // Store last error
+	scanner         *bufio.Scanner
+	nextGame        *GameScanned // Buffer for peeked game
+	lastError       error        // Store last error
+	opts            ScannerOpts
+	nextParsedGames []*Game // only valid when ExpandVariations==true
+}
+
+type ScannerOption func(*Scanner)
+
+// WithExpandVariations() instructs the scanner to expand all variations in
+// a single GameScanned into multiple Game instances (1 per variation) rather
+// than a single Game instance.
+func WithExpandVariations() ScannerOption {
+	return func(s *Scanner) {
+		s.opts.ExpandVariations = true
+	}
+}
+
+type ScannerOpts struct {
+	ExpandVariations bool // default false
 }
 
 // NewScanner creates a new PGN scanner that reads from the provided reader.
@@ -80,10 +97,20 @@ type Scanner struct {
 // Example:
 //
 //	scanner := NewScanner(strings.NewReader(pgnText))
-func NewScanner(r io.Reader) *Scanner {
+func NewScanner(r io.Reader, opts ...ScannerOption) *Scanner {
 	s := bufio.NewScanner(r)
 	s.Split(splitPGNGames)
-	return &Scanner{scanner: s}
+	ret := &Scanner{
+		scanner:         s,
+		nextParsedGames: make([]*Game, 0),
+	}
+
+	// apply all the options
+	for _, opt := range opts {
+		opt(ret)
+	}
+
+	return ret
 }
 
 // ScanGame reads and returns the next game from the source.
@@ -127,7 +154,7 @@ func (s *Scanner) ScanGame() (*GameScanned, error) {
 //	}
 func (s *Scanner) HasNext() bool {
 	// If we already have a buffered game, return true
-	if s.nextGame != nil {
+	if s.nextGame != nil || len(s.nextParsedGames) > 0 {
 		return true
 	}
 
@@ -154,6 +181,12 @@ func (s *Scanner) HasNext() bool {
 //	    // Process game
 //	}
 func (s *Scanner) ParseNext() (*Game, error) {
+	if len(s.nextParsedGames) > 0 {
+		ret := s.nextParsedGames[0]
+		s.nextParsedGames = s.nextParsedGames[1:]
+		return ret, nil
+	}
+
 	scannedGame, err := s.ScanGame()
 	if err != nil {
 		return nil, err
@@ -163,7 +196,17 @@ func (s *Scanner) ParseNext() (*Game, error) {
 		return nil, err
 	}
 	parser := NewParser(tokens)
-	return parser.Parse()
+	game, err := parser.Parse()
+	if err != nil {
+		return nil, err
+	}
+	if !s.opts.ExpandVariations {
+		return game, nil
+	} // else
+
+	parsedGames := game.Split()
+	s.nextParsedGames = parsedGames[1:]
+	return parsedGames[0], nil
 }
 
 // Split function for bufio.Scanner to split PGN games.

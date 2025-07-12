@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -229,4 +230,64 @@ func TestHasNextDoesntConsume(t *testing.T) {
 	if len(tokens) == 0 {
 		t.Error("First game has no tokens after multiple HasNext calls")
 	}
+}
+
+func validateExpand(t *testing.T, scanner *Scanner, expectedLastLines []string) {
+	count := 0
+	for scanner.HasNext() {
+		game, err := scanner.ParseNext()
+		if err != nil {
+			t.Fatalf("fail to parse game: %s", err.Error())
+		}
+
+		if game == nil {
+			t.Fatalf("game is nil")
+		}
+		if count >= len(expectedLastLines) {
+			t.Fatalf("expected %v games but found at least %v",
+				len(expectedLastLines), count+1)
+		}
+		lines := strings.Split(game.String(), "\n")
+		if len(lines) == 0 {
+			t.Fatalf("split game %v output blank", count+1)
+		}
+
+		lastLine := lines[len(lines)-1]
+		if lastLine != expectedLastLines[count] {
+			t.Errorf("game output not correct\n\tExpected:'%v'\n\tGot:     '%v'\n",
+				expectedLastLines[count], lastLine)
+		}
+		count++
+	}
+
+	if count != len(expectedLastLines) {
+		t.Fatalf("expected %v games but found only %v",
+			len(expectedLastLines), count)
+	}
+}
+
+func TestScannerExpand(t *testing.T) {
+	expectedLastLines := []string{
+		"1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4 *",
+		"1. e4 e5 2. Nc3 Nf6 3. f4 *",
+		"1. e4 d6 2. d4 Nf6 3. Nc3 e5 4. dxe5 dxe5 5. Qxd8+ Kxd8 *",
+		"1. e4 d6 2. d4 Nf6 3. Nc3 e5 4. Nf3 Nbd7 *",
+		"1. e3 e5 *",
+	}
+
+	pgn := mustParsePGN("fixtures/pgns/variations.pgn")
+	reader := strings.NewReader(pgn)
+	scanner := NewScanner(reader, WithExpandVariations())
+	validateExpand(t, scanner, expectedLastLines)
+}
+
+func TestScannerNoExpand(t *testing.T) {
+	expectedLastLines := []string{
+		"1. e4 (1. e3 e5) 1... e5 (1... d6 2. d4 Nf6 3. Nc3 e5 4. dxe5 (4. Nf3 Nbd7) 4... dxe5 5. Qxd8+ Kxd8) 2. Nf3 (2. Nc3 Nf6 3. f4) 2... Nc6 3. d4 exd4 4. Nxd4 *",
+	}
+
+	pgn := mustParsePGN("fixtures/pgns/variations.pgn")
+	reader := strings.NewReader(pgn)
+	scanner := NewScanner(reader)
+	validateExpand(t, scanner, expectedLastLines)
 }
