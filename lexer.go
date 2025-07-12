@@ -43,7 +43,7 @@ const (
 	CommentStart    // {
 	CommentEnd      // }
 	COMMENT         // The comment text
-	RESULT          // 1-0, 0-1, 1/2-1/2
+	RESULT          // 1-0, 0-1, 1/2-1/2, *
 	CAPTURE         // 'x' in moves
 	FILE            // a-h in moves when used as disambiguation
 	RANK            // 1-8 in moves when used as disambiguation
@@ -533,6 +533,8 @@ func (l *Lexer) NextToken() Token {
 	case 'x':
 		l.readChar()
 		return Token{Type: CAPTURE, Value: "x"}
+	case '*':
+		fallthrough
 	case '-':
 		return l.readResult()
 	case '$', '!', '?':

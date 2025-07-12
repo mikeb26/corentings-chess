@@ -1,6 +1,7 @@
 package chess
 
 import (
+	"os"
 	"testing"
 )
 
@@ -1012,5 +1013,59 @@ func validateTokens(t *testing.T, tokens []Token) {
 				t.Errorf("Invalid promotion piece at token %d: %v", i, token.Value)
 			}
 		}
+	}
+}
+
+func TestSingleFromPosPGN(t *testing.T) {
+	// Read fixture
+	data, err := os.ReadFile("fixtures/pgns/single_frompos.pgn")
+	if err != nil {
+		t.Fatalf("Failed to read fixture: %v", err)
+	}
+
+	lexer := NewLexer(string(data))
+
+	expected := []struct {
+		typ   TokenType
+		value string
+	}{
+		// Tags
+		{TagStart, "["}, {TagKey, "Event"}, {TagValue, "Slav Defense: Chebanenko Variation, 5. cxd5"}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "Site"}, {TagValue, ""}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "Date"}, {TagValue, "2025.07.12"}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "Round"}, {TagValue, "1"}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "White"}, {TagValue, ""}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "Black"}, {TagValue, ""}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "Result"}, {TagValue, "*"}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "UTCDate"}, {TagValue, "2025.07.12"}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "UTCTime"}, {TagValue, "15:51:01"}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "Variant"}, {TagValue, "Standard"}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "ECO"}, {TagValue, "D15"}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "FEN"}, {TagValue, "rnbqkb1r/1p2pppp/p1p2n2/3p4/2PP4/2N2N2/PP2PPPP/R1BQKB1R w KQkq - 0 5"}, {TagEnd, "]"},
+		{TagStart, "["}, {TagKey, "SetUp"}, {TagValue, "1"}, {TagEnd, "]"},
+		// Moves
+		{MoveNumber, "5"}, {DOT, "."},
+		{FILE, "c"}, {CAPTURE, "x"}, {SQUARE, "d5"},
+		{VariationStart, "("},
+		{MoveNumber, "5"}, {DOT, "."}, {SQUARE, "e3"}, {SQUARE, "e6"},
+		{MoveNumber, "6"}, {DOT, "."}, {FILE, "c"}, {CAPTURE, "x"}, {SQUARE, "d5"},
+		{FILE, "c"}, {CAPTURE, "x"}, {SQUARE, "d5"},
+		{VariationEnd, ")"},
+		{MoveNumber, "5"}, {ELLIPSIS, "..."}, {FILE, "c"}, {CAPTURE, "x"}, {SQUARE, "d5"},
+		{MoveNumber, "6"}, {DOT, "."}, {SQUARE, "e3"}, {SQUARE, "e6"},
+		{CommentStart, "{"}, {CommandStart, "[%"}, {CommandName, "eval"}, {CommandParam, "0.11"}, {CommandEnd, "]"}, {CommentEnd, "}"},
+		{RESULT, "*"},
+	}
+
+	for i, exp := range expected {
+		tok := lexer.NextToken()
+		if tok.Type != exp.typ || tok.Value != exp.value {
+			t.Errorf("Token %d: expected {%v, %q}, got {%v, %q}",
+				i, exp.typ, exp.value, tok.Type, tok.Value)
+		}
+	}
+	// final EOF
+	if tok := lexer.NextToken(); tok.Type != EOF {
+		t.Errorf("Expected EOF, got %v", tok.Type)
 	}
 }
