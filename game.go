@@ -365,7 +365,9 @@ func (g *Game) String() string {
 	// and that its first child is the first actual move.
 	needTrailingSpace := false
 	if g.rootMove != nil && len(g.rootMove.children) > 0 {
-		needTrailingSpace = !writeMoves(g.rootMove, 1, true, &sb, false, false)
+		needTrailingSpace = !writeMoves(g.rootMove,
+			g.rootMove.Position().moveCount,
+			g.rootMove.Position().Turn() == White, &sb, false, false, true)
 	}
 
 	// Append the game result.
@@ -429,11 +431,13 @@ func cmpTags(a, b sortableTagPair) int {
 //	sb - pointer to a strings.Builder where the formatted move notation is appended.
 //	subVariation - true if the current call is within a sub-variation, affecting formatting details.
 //	closedVariation - true if the prior call closed a sub-variation, affecting formatting details.
+//	isRoot - true if the current move is the root move of a game, affecting formatting details.
 //
 // The function recurses through the move tree, writing the main line first and then processing any additional variations,
 // ensuring that the output adheres to standard PGN conventions. Future enhancements may include support for all NAG values.
 // the function returns whether or not a trailing space was added to the output
-func writeMoves(node *Move, moveNum int, isWhite bool, sb *strings.Builder, subVariation, closedVariation bool) bool {
+func writeMoves(node *Move, moveNum int, isWhite bool, sb *strings.Builder,
+	subVariation, closedVariation, isRoot bool) bool {
 	trailingSpace := false
 
 	// If no moves remain, stop.
@@ -453,7 +457,7 @@ func writeMoves(node *Move, moveNum int, isWhite bool, sb *strings.Builder, subV
 		currentMove = node.children[0]
 	}
 
-	writeMoveNumber(moveNum, isWhite, subVariation, closedVariation, sb)
+	writeMoveNumber(moveNum, isWhite, subVariation, closedVariation, isRoot, sb)
 
 	// Encode the move using your AlgebraicNotation.
 	writeMoveEncoding(node, currentMove, subVariation, sb)
@@ -484,19 +488,22 @@ func writeMoves(node *Move, moveNum int, isWhite bool, sb *strings.Builder, subV
 			nextMoveNum = moveNum + 1
 			nextIsWhite = true
 		}
-		writeMoves(currentMove, nextMoveNum, nextIsWhite, sb, false, closedVar)
+		writeMoves(currentMove, nextMoveNum, nextIsWhite, sb, false, closedVar,
+			false)
 	}
 
 	return trailingSpace
 }
 
-func writeMoveNumber(moveNum int, isWhite bool, subVariation, closedVariation bool, sb *strings.Builder) {
+func writeMoveNumber(moveNum int, isWhite bool, subVariation, closedVariation,
+	isRoot bool, sb *strings.Builder) {
+
 	if closedVariation {
 		sb.WriteString(" ")
 	}
 	if isWhite {
 		sb.WriteString(fmt.Sprintf("%d. ", moveNum))
-	} else if subVariation || closedVariation {
+	} else if subVariation || closedVariation || isRoot {
 		sb.WriteString(fmt.Sprintf("%d... ", moveNum))
 	}
 }
@@ -538,7 +545,7 @@ func writeVariations(node *Move, moveNum int, isWhite bool, sb *strings.Builder)
 
 			variation := node.children[i]
 			sb.WriteString("(")
-			writeMoves(variation, moveNum, isWhite, sb, true, false)
+			writeMoves(variation, moveNum, isWhite, sb, true, false, false)
 			sb.WriteString(")")
 		}
 	}
