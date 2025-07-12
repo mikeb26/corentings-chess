@@ -237,7 +237,7 @@ func validateExpand(t *testing.T, scanner *Scanner, expectedLastLines []string) 
 	for scanner.HasNext() {
 		game, err := scanner.ParseNext()
 		if err != nil {
-			t.Fatalf("fail to parse game: %s", err.Error())
+			t.Fatalf("fail to parse game %v: %s", count+1, err.Error())
 		}
 
 		if game == nil {
@@ -287,6 +287,20 @@ func TestScannerNoExpand(t *testing.T) {
 	}
 
 	pgn := mustParsePGN("fixtures/pgns/variations.pgn")
+	reader := strings.NewReader(pgn)
+	scanner := NewScanner(reader)
+	validateExpand(t, scanner, expectedLastLines)
+}
+
+func TestScannerMultiFromPosNoExpand(t *testing.T) {
+	expectedLastLines := []string{
+		"1. d4 d5 2. c4 c6 { [%eval 0.21] } *",
+		"3. Nf3 (3. Nc3 Nf6 4. Nf3) 3... Nf6 4. Nc3 { [%eval 0.16] } *",
+		"4... a6 { [%eval 0.19] } *",
+		"5. cxd5 (5. e3 e6 6. cxd5 cxd5) 5... cxd5 6. e3 e6 { [%eval 0.11] } *",
+	}
+
+	pgn := mustParsePGN("fixtures/pgns/multi_frompos_games.pgn")
 	reader := strings.NewReader(pgn)
 	scanner := NewScanner(reader)
 	validateExpand(t, scanner, expectedLastLines)
