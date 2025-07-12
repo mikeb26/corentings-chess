@@ -602,10 +602,10 @@ func (p *Parser) parseVariation(parentMoveNumber uint64, parentPly int) error {
 				p.game.pos = newPos
 			}
 		} else {
-			p.game.pos = StartingPosition()
+			p.game.pos = p.game.rootMove.position.copy()
 		}
 	} else {
-		p.game.pos = StartingPosition()
+		p.game.pos = p.game.rootMove.position.copy()
 	}
 
 	p.currentMove = variationParent
