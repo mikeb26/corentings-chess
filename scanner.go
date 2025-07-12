@@ -11,15 +11,12 @@ Example usage:
 
 	// Read all games
 	for scanner.HasNext() {
-		game, err := scanner.ScanGame()
+		game, err := scanner.ParseNext()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Failed to parse game: %v", err)
 		}
 		// Process game
 	}
-
-	// Tokenize a specific game
-	tokens, err := TokenizeGame(game)
 */
 
 package chess
@@ -125,8 +122,8 @@ func (s *Scanner) ScanGame() (*GameScanned, error) {
 // Example:
 //
 //	for scanner.HasNext() {
-//	    game, err := scanner.ScanGame()
-//	    // Process game
+//	    scangame, err := scanner.ScanGame()
+//	    // Process scangame
 //	}
 func (s *Scanner) HasNext() bool {
 	// If we already have a buffered game, return true
@@ -144,6 +141,29 @@ func (s *Scanner) HasNext() bool {
 	// Store any error that occurred
 	s.lastError = s.scanner.Err()
 	return false
+}
+
+// ParseNext is a convenience wrapper combining the functionality of
+// ScanGame(), TokenizeGame(), NewParser(), and Parse() enabling
+// callers to simplify iterating over each Game within a pgn file.
+//
+// Example:
+//
+//	for scanner.HasNext() {
+//	    game, err := scanner.ParseNext()
+//	    // Process game
+//	}
+func (s *Scanner) ParseNext() (*Game, error) {
+	scannedGame, err := s.ScanGame()
+	if err != nil {
+		return nil, err
+	}
+	tokens, err := TokenizeGame(scannedGame)
+	if err != nil {
+		return nil, err
+	}
+	parser := NewParser(tokens)
+	return parser.Parse()
 }
 
 // Split function for bufio.Scanner to split PGN games.

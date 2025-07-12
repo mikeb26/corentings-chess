@@ -91,22 +91,10 @@ func TestGamesFromPGN(t *testing.T) {
 	for idx, test := range validPGNs {
 		reader := strings.NewReader(test.PGN)
 		scanner := NewScanner(reader)
-		scannedGame, err := scanner.ScanGame()
+		game, err := scanner.ParseNext()
 		if err != nil {
-			t.Fatalf("fail to scan game from valid pgn %d: %s", idx, err.Error())
+			t.Fatalf("fail to parse game from valid pgn %d: %s", idx, err.Error())
 		}
-
-		tokens, err := TokenizeGame(scannedGame)
-		if err != nil {
-			t.Fatalf("fail to tokenize game from valid pgn %d: %s", idx, err.Error())
-		}
-
-		parser := NewParser(tokens)
-		game, err := parser.Parse()
-		if err != nil {
-			t.Fatalf("fail to read games from valid pgn %d: %s", idx, err.Error())
-		}
-
 		if game == nil {
 			t.Fatalf("game is nil")
 		}
@@ -118,22 +106,10 @@ func TestGameWithVariations(t *testing.T) {
 	reader := strings.NewReader(pgn)
 
 	scanner := NewScanner(reader)
-	scannedGame, err := scanner.ScanGame()
+	game, err := scanner.ParseNext()
 	if err != nil {
-		t.Fatalf("fail to scan game from valid pgn: %s", err.Error())
+		t.Fatalf("fail to parse game from pgn: %s", err.Error())
 	}
-
-	tokens, err := TokenizeGame(scannedGame)
-	if err != nil {
-		t.Fatalf("fail to tokenize game from valid pgn: %s", err.Error())
-	}
-
-	parser := NewParser(tokens)
-	game, err := parser.Parse()
-	if err != nil {
-		t.Fatalf("fail to read games from valid pgn: %s", err.Error())
-	}
-
 	if game == nil {
 		t.Fatalf("game is nil")
 	}
@@ -161,18 +137,7 @@ func TestSingleGameFromPGN(t *testing.T) {
 
 	scanner := NewScanner(reader)
 
-	scannedGame, err := scanner.ScanGame()
-	if err != nil {
-		t.Fatalf("fail to scan game from valid pgn: %s", err.Error())
-	}
-
-	tokens, err := TokenizeGame(scannedGame)
-	if err != nil {
-		t.Fatalf("fail to tokenize game from valid pgn: %s", err.Error())
-	}
-
-	parser := NewParser(tokens)
-	game, err := parser.Parse()
+	game, err := scanner.ParseNext()
 	if err != nil {
 		t.Fatalf("fail to read games from valid pgn: %s", err.Error())
 	}
@@ -331,18 +296,7 @@ func TestCompleteGame(t *testing.T) {
 	reader := strings.NewReader(pgn)
 
 	scanner := NewScanner(reader)
-	scannedGame, err := scanner.ScanGame()
-	if err != nil {
-		t.Fatalf("fail to scan game from valid pgn: %s", err.Error())
-	}
-
-	tokens, err := TokenizeGame(scannedGame)
-	if err != nil {
-		t.Fatalf("fail to tokenize game from valid pgn: %s", err.Error())
-	}
-
-	parser := NewParser(tokens)
-	game, err := parser.Parse()
+	game, err := scanner.ParseNext()
 	if err != nil {
 		t.Fatalf("fail to read games from valid pgn: %s", err.Error())
 	}
@@ -413,18 +367,7 @@ func TestLichessMultipleCommand(t *testing.T) {
 	scanner := NewScanner(file)
 
 	// Test first game
-	scannedGame, err := scanner.ScanGame()
-	if err != nil {
-		t.Fatalf("Failed to read first game: %v", err)
-	}
-
-	tokens, err := TokenizeGame(scannedGame)
-	if err != nil {
-		t.Fatalf("Failed to tokenize first game: %v", err)
-	}
-
-	parser := NewParser(tokens)
-	game, err := parser.Parse()
+	game, err := scanner.ParseNext()
 	if err != nil {
 		t.Fatalf("fail to read games from valid pgn: %s", err.Error())
 	}
@@ -475,18 +418,7 @@ func TestParseMoveWithNAGAndComment(t *testing.T) {
 1. e4 $1 {Good move} e5 {Solid} $2 2. Nf3 $3 {Another comment} Nc6 $4 {Yet another}`
 
 	scanner := NewScanner(strings.NewReader(pgn))
-	scannedGame, err := scanner.ScanGame()
-	if err != nil {
-		t.Fatalf("fail to scan game: %v", err)
-	}
-
-	tokens, err := TokenizeGame(scannedGame)
-	if err != nil {
-		t.Fatalf("fail to tokenize game: %v", err)
-	}
-
-	parser := NewParser(tokens)
-	game, err := parser.Parse()
+	game, err := scanner.ParseNext()
 	if err != nil {
 		t.Fatalf("fail to parse game: %v", err)
 	}
@@ -522,18 +454,7 @@ func TestVariationMoveNumbers(t *testing.T) {
 1. e4 e5 2. Nf3 Nc6 3. Bb5 (3. Bc4 Nf6 4. d3) a6 4. Ba4 Nf6 5. O-O Be7 1-0`
 
 	scanner := NewScanner(strings.NewReader(pgn))
-	scannedGame, err := scanner.ScanGame()
-	if err != nil {
-		t.Fatalf("fail to scan game: %v", err)
-	}
-
-	tokens, err := TokenizeGame(scannedGame)
-	if err != nil {
-		t.Fatalf("fail to tokenize game: %v", err)
-	}
-
-	parser := NewParser(tokens)
-	game, err := parser.Parse()
+	game, err := scanner.ParseNext()
 	if err != nil {
 		t.Fatalf("fail to parse game: %v", err)
 	}
