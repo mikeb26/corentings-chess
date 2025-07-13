@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v2.1.0 - 2025-07-13
+#### Bug Fixes
+- fatal formatting - (32ce606) - Corentin Giaufer Saubert
+#### Refactoring
+- rename example functions for clarity in opening tests - (87b468c) - CorentinGS
+
+- - -
+
 ## v2.0.10 - 2025-07-07
 #### Bug Fixes
 - ambiguous moves in PGN; Add PGN test case (#47) - (0a2700b) - TheNipanen
