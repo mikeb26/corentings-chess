@@ -1228,6 +1228,25 @@ func FuzzTestPushNotationMove(f *testing.F) {
 	})
 }
 
+func TestInvalidPushNotationMove(t *testing.T) {
+	fen := "r1bqk1nr/pp1pppbp/6p1/1Bp1P3/P2n1P2/2N2N2/1PPP2PP/R1BQK2R w KQkq - 0 1"
+	bogusMv := "Kxh1"
+	opt, err := FEN(fen)
+	if err != nil {
+		t.Fatalf("FEN(fen) failed")
+	}
+	game := NewGame(opt)
+
+	err = game.PushNotationMove(bogusMv, UCINotation{}, nil)
+	if err == nil {
+		t.Errorf("PushNotationMove() (uci) succeeded in pushing bogus mv when it should have failed")
+	}
+	err = game.PushNotationMove(bogusMv, AlgebraicNotation{}, nil)
+	if err == nil {
+		t.Errorf("PushNotationMove() (alg) succeeded in pushing bogus mv when it should have failed")
+	}
+}
+
 func validateSplit(t *testing.T, origPgn string, expectedLastLines []string) {
 	reader := strings.NewReader(origPgn)
 	scanner := NewScanner(reader)
