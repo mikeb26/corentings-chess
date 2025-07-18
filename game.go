@@ -965,6 +965,7 @@ func (g *Game) buildOneGameFromPath(path []*Move) *Game {
 	newG := g.Clone()
 	newG.rootMove = rootMove
 	newG.currentMove = cur
+	newG.pos = cur.position
 
 	return newG
 }

@@ -232,7 +232,9 @@ func TestHasNextDoesntConsume(t *testing.T) {
 	}
 }
 
-func validateExpand(t *testing.T, scanner *Scanner, expectedLastLines []string) {
+func validateExpand(t *testing.T, scanner *Scanner, expectedLastLines []string,
+	expectedFinalPos []string) {
+
 	count := 0
 	for scanner.HasNext() {
 		game, err := scanner.ParseNext()
@@ -257,6 +259,11 @@ func validateExpand(t *testing.T, scanner *Scanner, expectedLastLines []string) 
 			t.Errorf("game output not correct\n\tExpected:'%v'\n\tGot:     '%v'\n",
 				expectedLastLines[count], lastLine)
 		}
+		fen := game.Position().XFENString()
+		if fen != expectedFinalPos[count] {
+			t.Errorf("game position not correct\n\tExpected:'%v'\n\tGot:     '%v'\n",
+				expectedFinalPos[count], fen)
+		}
 		count++
 	}
 
@@ -274,22 +281,32 @@ func TestScannerExpand(t *testing.T) {
 		"1. e4 d6 2. d4 Nf6 3. Nc3 e5 4. Nf3 Nbd7 *",
 		"1. e3 e5 *",
 	}
+	expectedFinalPos := []string{
+		"r1bqkbnr/pppp1ppp/2n5/8/3NP3/8/PPP2PPP/RNBQKB1R b KQkq - 0 4",
+		"rnbqkb1r/pppp1ppp/5n2/4p3/4PP2/2N5/PPPP2PP/R1BQKBNR b KQkq - 0 3",
+		"rnbk1b1r/ppp2ppp/5n2/4p3/4P3/2N5/PPP2PPP/R1B1KBNR w KQ - 0 6",
+		"r1bqkb1r/pppn1ppp/3p1n2/4p3/3PP3/2N2N2/PPP2PPP/R1BQKB1R w KQkq - 2 5",
+		"rnbqkbnr/pppp1ppp/8/4p3/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+	}
 
 	pgn := mustParsePGN("fixtures/pgns/variations.pgn")
 	reader := strings.NewReader(pgn)
 	scanner := NewScanner(reader, WithExpandVariations())
-	validateExpand(t, scanner, expectedLastLines)
+	validateExpand(t, scanner, expectedLastLines, expectedFinalPos)
 }
 
 func TestScannerNoExpand(t *testing.T) {
 	expectedLastLines := []string{
 		"1. e4 (1. e3 e5) 1... e5 (1... d6 2. d4 Nf6 3. Nc3 e5 4. dxe5 (4. Nf3 Nbd7) 4... dxe5 5. Qxd8+ Kxd8) 2. Nf3 (2. Nc3 Nf6 3. f4) 2... Nc6 3. d4 exd4 4. Nxd4 *",
 	}
+	expectedFinalPos := []string{
+		"r1bqkbnr/pppp1ppp/2n5/8/3NP3/8/PPP2PPP/RNBQKB1R b KQkq - 0 4",
+	}
 
 	pgn := mustParsePGN("fixtures/pgns/variations.pgn")
 	reader := strings.NewReader(pgn)
 	scanner := NewScanner(reader)
-	validateExpand(t, scanner, expectedLastLines)
+	validateExpand(t, scanner, expectedLastLines, expectedFinalPos)
 }
 
 func TestScannerMultiFromPosNoExpand(t *testing.T) {
@@ -299,9 +316,15 @@ func TestScannerMultiFromPosNoExpand(t *testing.T) {
 		"4... a6 { [%eval 0.19] } *",
 		"5. cxd5 (5. e3 e6 6. cxd5 cxd5) 5... cxd5 6. e3 e6 { [%eval 0.11] } *",
 	}
+	expectedFinalPos := []string{
+		"rnbqkbnr/pp2pppp/2p5/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3",
+		"rnbqkb1r/pp2pppp/2p2n2/3p4/2PP4/2N2N2/PP2PPPP/R1BQKB1R b KQkq - 3 4",
+		"rnbqkb1r/1p2pppp/p1p2n2/3p4/2PP4/2N2N2/PP2PPPP/R1BQKB1R w KQkq - 0 5",
+		"rnbqkb1r/1p3ppp/p3pn2/3p4/3P4/2N1PN2/PP3PPP/R1BQKB1R w KQkq - 0 7",
+	}
 
 	pgn := mustParsePGN("fixtures/pgns/multi_frompos_games.pgn")
 	reader := strings.NewReader(pgn)
 	scanner := NewScanner(reader)
-	validateExpand(t, scanner, expectedLastLines)
+	validateExpand(t, scanner, expectedLastLines, expectedFinalPos)
 }
