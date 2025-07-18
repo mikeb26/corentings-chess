@@ -135,6 +135,16 @@ func (UCINotation) Decode(pos *Position, s string) (*Move, error) {
 	if l < 4 || l > 5 {
 		return nil, fmt.Errorf("chess: invalid UCI notation length %d in %q", l, s)
 	}
+	for idx := 0; idx < 2; idx += 2 {
+		if s[idx+0] < 'a' || s[idx+0] > 'h' {
+			return nil, fmt.Errorf("chess: invalid UCI notation sq:%v file:%v",
+				idx/2, s[0])
+		}
+		if s[idx+1] < '1' || s[idx+1] > '8' {
+			return nil, fmt.Errorf("chess: invalid UCI notation sq:%v rank:%v",
+				idx/2, s[0])
+		}
+	}
 
 	// Convert directly instead of using map lookups
 	s1 := Square((s[0] - 'a') + (s[1]-'1')*8)
